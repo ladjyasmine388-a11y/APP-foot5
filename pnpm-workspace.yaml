@@ -4,6 +4,13 @@ packages:
   - e2e
 
 # Correctifs de sécurité de dépendances transitives de l'outillage de développement (voir docs/SECURITY.md).
+allowBuilds:
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  '@swc/core': false
+  esbuild: true
+  prisma: true
+
 overrides:
   esbuild: '>=0.28.1'
   mysql2: '>=3.23.1'
