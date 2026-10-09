@@ -6,6 +6,16 @@ import { AppModule } from './app.module.js';
 import { configureApp, createAdapter } from './app.setup.js';
 import { loadEnv } from './infra/config/env.js';
 
+// En développement, charge le .env de la racine du dépôt. Jamais en production : la configuration
+// vient alors de l'environnement du serveur (un fichier .env en production serait un risque).
+if (process.env['NODE_ENV'] !== 'production') {
+  try {
+    process.loadEnvFile(new URL('../../../.env', import.meta.url));
+  } catch {
+    /* pas de .env : on s'appuie sur l'environnement */
+  }
+}
+
 async function bootstrap(): Promise<void> {
   // Valide la configuration AVANT toute initialisation : on échoue vite et clairement.
   const env = loadEnv();

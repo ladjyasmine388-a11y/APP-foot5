@@ -24,9 +24,17 @@ const baseSchema = z.object({
   PAYMENT_PROVIDER: z.enum(['fake', 'live']).default('fake'),
   PAYMENT_WEBHOOK_SECRET: z.string().min(16),
 
+  /** `console` : affiche les emails dans les journaux (dev/test uniquement). `smtp` : envoi réel (étape 8). */
+  MAIL_DRIVER: z.enum(['console', 'smtp']).default('console'),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: positiveInt(1025, 1, 65535),
   MAIL_FROM: z.string().default('Foot Five <no-reply@footfive.local>'),
+
+  /** Plafond global de requêtes par IP et par minute (filet de sécurité ; les routes sensibles ont leurs propres limites). */
+  GLOBAL_RATE_LIMIT_PER_MINUTE: positiveInt(300, 10, 100_000),
+
+  /** Documentation OpenAPI (/api/docs). Par défaut : activée sauf en production. */
+  OPENAPI_ENABLED: z.stringbool().optional(),
 
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage'),
@@ -51,6 +59,10 @@ const envSchema = baseSchema.superRefine((env, ctx) => {
     // Garde-fous : jamais de paiement simulé ni de secrets de développement en production.
     if (env.PAYMENT_PROVIDER === 'fake') {
       fail('PAYMENT_PROVIDER', 'Le fournisseur de paiement simulé est interdit en production');
+    }
+    // Le driver console écrit les liens de vérification / réinitialisation dans les journaux : jamais en production.
+    if (env.MAIL_DRIVER === 'console') {
+      fail('MAIL_DRIVER', 'Le driver d’email « console » est interdit en production');
     }
     if (env.JWT_ACCESS_SECRET.includes('dev-only') || env.JWT_ACCESS_SECRET.includes('test-only')) {
       fail('JWT_ACCESS_SECRET', 'Secret de développement interdit en production');

@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import type { Env } from './infra/config/env.js';
+import { setupOpenApi } from './openapi.js';
 
 export const API_PREFIX = 'api/v1';
 const REQUEST_ID_HEADER = 'x-request-id';
@@ -22,6 +24,8 @@ export function createAdapter(): FastifyAdapter {
     },
     // Derrière un reverse proxy (production), pour des IP clientes correctes (rate limiting, audit).
     trustProxy: true,
+    // Corps JSON limité : aucune route du MVP n'a besoin de plus (les images passeront par un upload dédié).
+    bodyLimit: 100 * 1024,
   });
 }
 
@@ -37,10 +41,22 @@ export async function configureApp(app: NestFastifyApplication, env: Env): Promi
     origin: [env.WEB_ORIGIN],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Request-Id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Idempotency-Key',
+      'X-Request-Id',
+      'X-Client-Platform',
+    ],
   });
-  // Limite globale ; des limites plus strictes seront appliquées aux routes d'authentification.
-  await app.register(rateLimit, { global: true, max: 300, timeWindow: '1 minute' });
+  // Pas de secret de signature : le cookie de refresh n'est pas signé (il est opaque et vérifié en base).
+  await app.register(cookie);
+  // Limite globale ; des limites plus strictes sont appliquées route par route (@RateLimit).
+  await app.register(rateLimit, {
+    global: true,
+    max: env.GLOBAL_RATE_LIMIT_PER_MINUTE,
+    timeWindow: '1 minute',
+  });
 
   app
     .getHttpAdapter()
@@ -48,6 +64,10 @@ export async function configureApp(app: NestFastifyApplication, env: Env): Promi
     .addHook('onSend', async (request, reply) => {
       reply.header(REQUEST_ID_HEADER, request.id);
     });
+
+  if (env.OPENAPI_ENABLED ?? env.NODE_ENV !== 'production') {
+    setupOpenApi(app);
+  }
 
   app.enableShutdownHooks();
 }

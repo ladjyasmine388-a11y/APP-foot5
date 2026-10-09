@@ -23,6 +23,8 @@ const testEnv = {
   JWT_ACCESS_SECRET: 'test-only-access-secret-0123456789-abcdef',
   PAYMENT_PROVIDER: 'fake',
   PAYMENT_WEBHOOK_SECRET: 'test-only-webhook-secret-0123456789',
+  // Les tests enchaînent beaucoup de requêtes depuis la même IP : on neutralise seulement le filet global.
+  GLOBAL_RATE_LIMIT_PER_MINUTE: '100000',
 };
 
 // SWC gère les décorateurs NestJS + emitDecoratorMetadata (esbuild ne le fait pas).

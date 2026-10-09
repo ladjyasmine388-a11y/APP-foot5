@@ -15,6 +15,7 @@ const validProd = {
   NODE_ENV: 'production',
   JWT_ACCESS_SECRET: 'k3J9xQ2mZp7LwR4vB8nT1yH6cD5fG0sA9uE2oI7',
   PAYMENT_PROVIDER: 'live',
+  MAIL_DRIVER: 'smtp',
   PAYMENT_WEBHOOK_SECRET: 'wh_9d8f7a6b5c4e3d2c1b0a9f8e7d6c5b4a',
 };
 
@@ -55,6 +56,10 @@ describe('loadEnv', () => {
       expect(() => loadEnv({ ...validProd, PAYMENT_PROVIDER: 'fake' })).toThrow(
         /paiement simulé est interdit/,
       );
+    });
+
+    it('INTERDIT le driver d’email « console » en production (il journalise les liens secrets)', () => {
+      expect(() => loadEnv({ ...validProd, MAIL_DRIVER: 'console' })).toThrow(/MAIL_DRIVER/);
     });
 
     it('INTERDIT les secrets de développement en production', () => {
