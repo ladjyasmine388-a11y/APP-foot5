@@ -13,6 +13,8 @@ export const BASELINE_SETTINGS = {
   'booking.min_lead_minutes': 30,
   /** Horizon de réservation : nombre de jours à l'avance au maximum. */
   'booking.max_days_ahead': 60,
+  /** Réservations simultanées en attente de paiement par utilisateur (anti-accaparement de créneaux). */
+  'booking.max_active_holds': 3,
   /** Acompte par défaut demandé en ligne : mode et valeurs à définir avec le prestataire de paiement. */
   'booking.default_deposit': { mode: 'PERCENT', rateBps: 2000, fixedMinor: 0, minMinor: 0 },
   /** Politique d'annulation par défaut (à préciser avec le métier). */

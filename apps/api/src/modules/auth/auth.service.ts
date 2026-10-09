@@ -322,17 +322,19 @@ export class AuthService {
     ttlMs: number,
   ): Promise<string> {
     const token = generateOpaqueToken();
-    await this.prisma.$transaction([
-      this.prisma.emailToken.deleteMany({ where: { userId, type, usedAt: null } }),
-      this.prisma.emailToken.create({
+    // Forme « interactive » (et non le tableau) : les deux requêtes s'exécutent l'une après l'autre sur la même
+    // connexion, ce que le pilote pg exige (le parallèle sur une connexion est déprécié).
+    await this.prisma.$transaction(async (tx) => {
+      await tx.emailToken.deleteMany({ where: { userId, type, usedAt: null } });
+      await tx.emailToken.create({
         data: {
           userId,
           type,
           tokenHash: hashToken(token),
           expiresAt: new Date(Date.now() + ttlMs),
         },
-      }),
-    ]);
+      });
+    });
     return token;
   }
 

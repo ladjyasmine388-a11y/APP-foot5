@@ -27,6 +27,11 @@ export class SettingsService {
     return typeof raw === 'number' && Number.isInteger(raw) && raw >= 0 ? raw : fallback;
   }
 
+  /** Valeur JSON brute d'un paramètre (à valider par l'appelant), ou null si absent. */
+  getJson(key: string): Promise<unknown> {
+    return this.getRaw(key);
+  }
+
   /** À appeler après une modification par l'admin. */
   invalidate(): void {
     this.cache.clear();

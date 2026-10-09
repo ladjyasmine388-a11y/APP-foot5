@@ -137,6 +137,12 @@ export function refreshCookieOf(res: LightMyRequestResponse): string | undefined
   return res.cookies.find((c) => c.name === 'ff_refresh')?.value;
 }
 
+let ipCounter = 0;
+function nextTestIp(): string {
+  ipCounter += 1;
+  return `10.${(ipCounter >> 16) & 255}.${(ipCounter >> 8) & 255}.${ipCounter & 255}`;
+}
+
 export interface Signup {
   email: string;
   password: string;
@@ -149,7 +155,14 @@ export interface Signup {
 /** Inscrit un utilisateur comme le ferait une application mobile (refresh token dans le corps). */
 export async function signup(t: TestApp, overrides: Record<string, unknown> = {}): Promise<Signup> {
   const body = validRegistration(overrides);
-  const res = await post(t, '/auth/register', body, { 'x-client-platform': 'mobile' });
+  // Une adresse IP distincte par inscription : la limite d'inscription (10 / h / IP) ne doit pas gêner les tests.
+  const res = await post(
+    t,
+    '/auth/register',
+    body,
+    { 'x-client-platform': 'mobile' },
+    nextTestIp(),
+  );
   if (res.statusCode !== 201) throw new Error(`Inscription impossible : ${res.body}`);
   const json = res.json();
   return {
@@ -180,4 +193,15 @@ export async function craftAccessToken(opts: {
     .setIssuedAt(now - 3600)
     .setExpirationTime(now + (opts.expiresInSeconds ?? 600))
     .sign(secret);
+}
+
+/** Utilisateur dont l'email est vérifié (exigé pour réserver ou déclarer un complexe). */
+export async function verifiedSignup(
+  t: TestApp,
+  overrides: Record<string, unknown> = {},
+): Promise<Signup> {
+  const user = await signup(t, overrides);
+  const res = await post(t, '/auth/verify-email', { token: t.mailer.lastToken(user.email) });
+  if (res.statusCode !== 204) throw new Error(`Vérification impossible : ${res.body}`);
+  return user;
 }

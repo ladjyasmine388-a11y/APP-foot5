@@ -4,3 +4,4 @@ export * from './time';
 export * from './schemas/primitives';
 export * from './schemas/auth';
 export * from './schemas/venues';
+export * from './schemas/bookings';

@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import type { ManageSlot, PublicSlot } from '@footfive/shared';
 import { AppException } from '../../common/errors/app-exception.js';
-import { daysBetween, todayIn } from '../../common/time/zoned-time.js';
+import { addDays, daysBetween, todayIn } from '../../common/time/zoned-time.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
 import { SettingsService } from '../settings/settings.service.js';
 import {
@@ -19,6 +19,21 @@ const OCCUPYING_STATUSES = ['PENDING_PAYMENT', 'CONFIRMED', 'COMPLETED', 'NO_SHO
 export interface FieldDay {
   field: { id: string; name: string; capacity: number; slotDurationMin: number };
   slots: ComputedSlot[];
+}
+
+export interface FoundSlot {
+  venue: {
+    id: string;
+    name: string;
+    status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+    timezone: string;
+    depositPolicy: unknown;
+    cancellationPolicy: unknown;
+  };
+  field: { id: string; name: string; capacity: number; slotDurationMin: number };
+  /** Jour de service du créneau. */
+  date: string;
+  slot: ComputedSlot | null;
 }
 
 export interface VenueDay {
@@ -146,6 +161,55 @@ export class AvailabilityService {
       minLeadMinutes,
     });
     return { timezone: venue.timezone, fields };
+  }
+
+  /**
+   * Retrouve LE créneau qui commence exactement à `startsAt` sur un terrain (pour le réserver).
+   * Retourne null si le terrain n'existe pas ou est inactif ; `slot` est null si l'instant ne correspond à aucun
+   * créneau de la grille (horaires, durée) — jamais de créneau « inventé » par le client.
+   * Un créneau après minuit appartient au jour de service précédent : on regarde la date locale ET la veille.
+   */
+  async findSlot(
+    fieldId: string,
+    startsAt: Date,
+    now: Date = new Date(),
+  ): Promise<FoundSlot | null> {
+    const field = await this.prisma.field.findFirst({
+      where: { id: fieldId, isActive: true },
+      select: {
+        venueId: true,
+        venue: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+            timezone: true,
+            depositPolicy: true,
+            cancellationPolicy: true,
+          },
+        },
+      },
+    });
+    if (!field) return null;
+
+    const localDate = todayIn(field.venue.timezone, startsAt);
+    for (const date of [localDate, addDays(localDate, -1)]) {
+      const day = await this.getVenueDay(field.venueId, date, { fieldId, now });
+      const fieldDay = day?.fields[0];
+      const slot = fieldDay?.slots.find((s) => s.startsAt.getTime() === startsAt.getTime());
+      if (fieldDay && slot) return { venue: field.venue, field: fieldDay.field, date, slot };
+    }
+    // Aucun créneau à cet instant : on renvoie quand même le terrain pour un message d'erreur précis.
+    const fallbackDay = await this.getVenueDay(field.venueId, localDate, { fieldId, now });
+    const fallbackField = fallbackDay?.fields[0]?.field;
+    return fallbackField
+      ? { venue: field.venue, field: fallbackField, date: localDate, slot: null }
+      : {
+          venue: field.venue,
+          field: { id: fieldId, name: '', capacity: 0, slotDurationMin: 60 },
+          date: localDate,
+          slot: null,
+        };
   }
 
   /** Calcule les créneaux des terrains d'UN complexe (une seule requête de réservations). */
