@@ -25,3 +25,6 @@ Thumbs.db
 
 # Caches locaux (ex. binaire SWC)
 .cache/
+
+# Client Prisma généré (reconstruit par `pnpm generate`)
+apps/api/src/generated/

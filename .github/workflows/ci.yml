@@ -31,7 +31,7 @@ jobs:
           --health-retries 10
 
     env:
-      TEST_DATABASE_URL: postgresql://footfive:footfive_ci_password@localhost:5433/footfive_test?schema=public
+      TEST_DATABASE_URL: postgresql://footfive:footfive_ci_password@localhost:5433/footfive_test
 
     steps:
       - uses: actions/checkout@v4

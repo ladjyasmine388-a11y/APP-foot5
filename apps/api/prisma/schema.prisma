@@ -1,0 +1,955 @@
+// ============================================================================
+// Foot Five — schéma de données
+//
+// Conventions
+//  - Identifiants : UUID v7 (triables par date de création).
+//  - Dates        : TIMESTAMPTZ, toujours stockées en UTC (voir post-traitement du fichier).
+//  - Argent       : entiers en unité mineure (DZD), jamais de flottants. Taux en points de base (100 bps = 1 %).
+//  - Colonnes     : camelCase (convention Prisma) ; le SQL brut doit les mettre entre guillemets ("fieldId").
+//
+// Ce que Prisma ne sait PAS exprimer est écrit en SQL dans prisma/migrations/*_db_guarantees :
+//  - la contrainte d'exclusion anti-double-réservation (EXCLUDE USING gist) ;
+//  - les contraintes CHECK (cohérence financière, plages horaires, email en minuscules…) ;
+//  - les index uniques partiels ;
+//  - l'immuabilité du journal d'audit.
+// Ces garanties vivent dans la base, pas dans le code applicatif : elles tiennent même si le code a un bug.
+// ============================================================================
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum PlatformRole {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+enum PlayerLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum PlayerPosition {
+  GOALKEEPER
+  DEFENDER
+  MIDFIELDER
+  FORWARD
+  ANY
+}
+
+enum AuthProvider {
+  GOOGLE
+  APPLE
+  PHONE
+}
+
+enum EmailTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+enum TeamMemberRole {
+  CAPTAIN
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
+
+enum VenueStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+}
+
+enum VenueStaffRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+enum FieldSurface {
+  ARTIFICIAL_TURF
+  NATURAL_GRASS
+  HARD_COURT
+  OTHER
+}
+
+/// "AVAILABLE" n'est pas un statut : c'est l'absence de réservation active sur le créneau.
+/// Le verrou temporaire (hold) = PENDING_PAYMENT + holdExpiresAt.
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+  NO_SHOW
+}
+
+enum BookingSource {
+  WEB
+  MOBILE
+  VENUE_MANUAL
+  ADMIN
+}
+
+/// BLOCK = créneau rendu indisponible par le complexe (sans client, sans montant).
+/// Il partage la table des réservations pour que la MÊME contrainte d'exclusion garantisse
+/// qu'un blocage ne peut jamais chevaucher une réservation (et inversement).
+enum BookingType {
+  STANDARD
+  SOLO_SESSION
+  OPPONENT_MATCH
+  BLOCK
+}
+
+enum PaymentMode {
+  DEPOSIT
+  FULL_ONLINE
+  ON_SITE
+}
+
+enum PaymentKind {
+  DEPOSIT
+  BALANCE
+  FULL
+}
+
+enum PaymentStatus {
+  INITIATED
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum RefundStatus {
+  REQUESTED
+  APPROVED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REJECTED
+}
+
+enum CommissionScope {
+  GLOBAL
+  VENUE
+  BOOKING_TYPE
+}
+
+enum WebhookEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+  IGNORED
+}
+
+enum SoloSessionOrigin {
+  PLAYER
+  VENUE
+}
+
+enum SoloSessionStatus {
+  OPEN
+  FULL
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum SoloPlayerStatus {
+  JOINED
+  LEFT
+  NO_SHOW
+}
+
+enum OpponentListingStatus {
+  OPEN
+  ACCEPTED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum MatchRequestStatus {
+  REQUESTED
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
+enum MatchSource {
+  TEAM
+  SOLO_SESSION
+  OPPONENT_LISTING
+}
+
+enum MatchStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+}
+
+enum TeamSide {
+  A
+  B
+  NONE
+}
+
+enum NotificationType {
+  BOOKING_CONFIRMED
+  PAYMENT_CONFIRMED
+  BOOKING_CANCELLED
+  BOOKING_EXPIRED
+  REFUND_PROCESSED
+  SOLO_ALMOST_FULL
+  SOLO_FULL
+  SOLO_CANCELLED
+  TEAM_INVITATION_RECEIVED
+  TEAM_INVITATION_ACCEPTED
+  OPPONENT_REQUEST_RECEIVED
+  OPPONENT_ACCEPTED
+  OPPONENT_REJECTED
+  MATCH_CANCELLED
+  MATCH_REMINDER
+  VENUE_APPROVED
+  VENUE_SUSPENDED
+}
+
+// ───────────────────── Identité et accès ─────────────────────
+
+model User {
+  id                String         @id @default(uuid(7)) @db.Uuid
+  /// Toujours en minuscules (CHECK en base + normalisation applicative).
+  email             String         @unique
+  phone             String
+  /// Argon2id. Null si le compte n'utilise qu'un fournisseur externe (Google/Apple/téléphone).
+  passwordHash      String?
+  firstName         String
+  lastName          String
+  birthDate         DateTime?      @db.Date
+  avatarUrl         String?
+  city              String?
+  level             PlayerLevel    @default(BEGINNER)
+  preferredPosition PlayerPosition @default(ANY)
+  /// Préférences libres validées par Zod côté API.
+  preferences       Json           @default("{}")
+  /// Langue de l'interface : ar | fr | en.
+  locale            String         @default("fr")
+  platformRole      PlatformRole   @default(USER)
+  status            UserStatus     @default(ACTIVE)
+  emailVerifiedAt   DateTime?      @db.Timestamptz(3)
+  /// Renseigné à la suppression du compte : les données personnelles sont effacées,
+  /// la ligne est conservée pour l'intégrité comptable des réservations passées.
+  anonymizedAt      DateTime?      @db.Timestamptz(3)
+  createdAt         DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime       @updatedAt @db.Timestamptz(3)
+
+  stats               PlayerStats?
+  identities          AuthIdentity[]
+  sessions            Session[]
+  emailTokens         EmailToken[]
+  venueStaff          VenueStaff[]
+  teamMemberships     TeamMember[]
+  captainOf           Team[]             @relation("TeamCaptain")
+  invitationsSent     TeamInvitation[]   @relation("InvitationInviter")
+  invitationsReceived TeamInvitation[]   @relation("InvitationInvitee")
+  bookings            Booking[]          @relation("BookingCustomer")
+  bookingsCancelled   Booking[]          @relation("BookingCanceller")
+  bookingsCreated     Booking[]          @relation("BookingCreator")
+  soloSessionsCreated SoloSession[]
+  soloPlayers         SoloPlayer[]
+  opponentListings    OpponentListing[]
+  matchRequestsMade   MatchRequest[]
+  matchesCreated      Match[]
+  matchParticipations MatchParticipant[]
+  notifications       Notification[]
+  reviews             Review[]
+  refundsRequested    Refund[]           @relation("RefundRequester")
+  refundsApproved     Refund[]           @relation("RefundApprover")
+  commissionRules     CommissionRule[]
+  auditLogs           AuditLog[]
+  platformSettings    PlatformSetting[]
+
+  @@index([status])
+  @@index([phone])
+  @@index([city])
+}
+
+/// Indicateurs de fiabilité calculés UNIQUEMENT par le serveur (jamais modifiables par l'utilisateur).
+model PlayerStats {
+  userId           String   @id @db.Uuid
+  matchesPlayed    Int      @default(0)
+  noShowCount      Int      @default(0)
+  lateCancelCount  Int      @default(0)
+  /// 0..100. Évolue selon la présence réelle, jamais sur déclaration du joueur.
+  reliabilityScore Int      @default(100)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Connexions externes (Google, Apple, téléphone). Le mot de passe reste sur User.passwordHash.
+model AuthIdentity {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  userId          String       @db.Uuid
+  provider        AuthProvider
+  providerSubject String
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@index([userId])
+}
+
+/// Session révocable = un refresh token. À chaque rafraîchissement, le token est remplacé (rotation).
+/// Présenter un token déjà utilisé révoque toute la famille (détection de vol).
+model Session {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  userId           String    @db.Uuid
+  familyId         String    @db.Uuid
+  /// SHA-256 du token opaque : le token en clair n'est jamais stocké.
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  lastUsedAt       DateTime? @db.Timestamptz(3)
+  expiresAt        DateTime  @db.Timestamptz(3)
+  revokedAt        DateTime? @db.Timestamptz(3)
+  revokedReason    String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+model EmailToken {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  userId    String         @db.Uuid
+  type      EmailTokenType
+  tokenHash String         @unique
+  expiresAt DateTime       @db.Timestamptz(3)
+  usedAt    DateTime?      @db.Timestamptz(3)
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+// ───────────────────────── Équipes ─────────────────────────
+
+model Team {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  name        String
+  logoUrl     String?
+  captainId   String      @db.Uuid
+  level       PlayerLevel @default(BEGINNER)
+  city        String?
+  description String?
+  createdAt   DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime?   @db.Timestamptz(3)
+
+  captain          User              @relation("TeamCaptain", fields: [captainId], references: [id])
+  members          TeamMember[]
+  invitations      TeamInvitation[]
+  opponentListings OpponentListing[]
+  matchRequests    MatchRequest[]
+  matchesAsA       Match[]           @relation("MatchTeamA")
+  matchesAsB       Match[]           @relation("MatchTeamB")
+
+  @@index([city])
+  @@index([captainId])
+}
+
+/// Un joueur ne peut être membre ACTIF qu'une fois d'une même équipe (index unique partiel, voir migration).
+model TeamMember {
+  id       String         @id @default(uuid(7)) @db.Uuid
+  teamId   String         @db.Uuid
+  userId   String         @db.Uuid
+  role     TeamMemberRole @default(MEMBER)
+  joinedAt DateTime       @default(now()) @db.Timestamptz(3)
+  leftAt   DateTime?      @db.Timestamptz(3)
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([teamId])
+  @@index([userId])
+}
+
+model TeamInvitation {
+  id           String           @id @default(uuid(7)) @db.Uuid
+  teamId       String           @db.Uuid
+  inviterId    String           @db.Uuid
+  /// Invité connu (compte existant) OU invité par email (compte à créer) : l'un des deux est requis.
+  inviteeId    String?          @db.Uuid
+  inviteeEmail String?
+  status       InvitationStatus @default(PENDING)
+  expiresAt    DateTime         @db.Timestamptz(3)
+  respondedAt  DateTime?        @db.Timestamptz(3)
+  createdAt    DateTime         @default(now()) @db.Timestamptz(3)
+
+  team    Team  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  inviter User  @relation("InvitationInviter", fields: [inviterId], references: [id])
+  invitee User? @relation("InvitationInvitee", fields: [inviteeId], references: [id])
+
+  @@index([teamId, status])
+  @@index([inviteeId, status])
+  @@index([inviteeEmail])
+}
+
+// ───────────────── Offre : complexes, terrains, tarifs ─────────────────
+
+/// Complexe = le locataire (tenant) de la plateforme. Toute donnée "dashboard complexe" est filtrée par venueId.
+model Venue {
+  id                 String      @id @default(uuid(7)) @db.Uuid
+  name               String
+  slug               String      @unique
+  description        String?
+  city               String
+  /// Quartier.
+  district           String?
+  address            String
+  latitude           Float?
+  longitude          Float?
+  timezone           String      @default("Africa/Algiers")
+  phone              String?
+  /// Équipements : "parking", "vestiaires", "douches", "buvette"…
+  amenities          String[]
+  photos             String[]
+  status             VenueStatus @default(PENDING)
+  /// Politique d'annulation (validée par Zod). Null = règle par défaut de la plateforme.
+  cancellationPolicy Json?
+  /// Acompte demandé en ligne (validé par Zod). Null = règle par défaut de la plateforme.
+  depositPolicy      Json?
+  ratingAvg          Float       @default(0)
+  ratingCount        Int         @default(0)
+  createdAt          DateTime    @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime    @updatedAt @db.Timestamptz(3)
+
+  staff           VenueStaff[]
+  fields          Field[]
+  openingHours    OpeningHour[]
+  bookings        Booking[]
+  commissionRules CommissionRule[]
+  soloSessions    SoloSession[]
+  opponentListing OpponentListing[]
+  matches         Match[]
+  reviews         Review[]
+
+  @@index([status, city])
+  @@index([city, district])
+}
+
+model VenueStaff {
+  id        String         @id @default(uuid(7)) @db.Uuid
+  venueId   String         @db.Uuid
+  userId    String         @db.Uuid
+  role      VenueStaffRole @default(STAFF)
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([venueId, userId])
+  @@index([userId])
+}
+
+model Field {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  venueId         String       @db.Uuid
+  name            String
+  /// Nombre total de joueurs : 10 (petit terrain, 5v5) à 16 (grand terrain, 8v8). CHECK en base.
+  capacity        Int          @default(10)
+  /// Texte libre, ex. "40 x 20 m".
+  dimensions      String?
+  surface         FieldSurface @default(ARTIFICIAL_TURF)
+  lighting        Boolean      @default(true)
+  covered         Boolean      @default(false)
+  photos          String[]
+  description     String?
+  /// Durée d'un créneau en minutes. MVP : 60.
+  slotDurationMin Int          @default(60)
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime     @updatedAt @db.Timestamptz(3)
+
+  venue        Venue         @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  openingHours OpeningHour[]
+  pricingRules PricingRule[]
+  bookings     Booking[]
+
+  @@unique([venueId, name])
+  /// Cible de la clé étrangère composite de Booking : un terrain appartient à UN complexe, sans ambiguïté.
+  @@unique([id, venueId])
+  @@index([venueId, isActive])
+}
+
+/// Horaires d'ouverture. fieldId nul = horaires du complexe ; renseigné = surcharge pour ce terrain.
+/// Heures exprimées en MINUTES depuis minuit, en heure LOCALE du complexe (indépendant des fuseaux).
+/// closesAtMin peut dépasser 1440 (ex. 1560 = 02:00 le lendemain) pour une fermeture après minuit.
+model OpeningHour {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  venueId     String  @db.Uuid
+  fieldId     String? @db.Uuid
+  /// ISO : 1 = lundi … 7 = dimanche.
+  weekday     Int
+  opensAtMin  Int
+  closesAtMin Int
+
+  venue Venue  @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  field Field? @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([venueId, weekday])
+  @@index([fieldId])
+}
+
+/// Règle de prix d'un terrain par jour et tranche horaire.
+/// Résolution : on retient la règle active la plus PRIORITAIRE qui couvre le début du créneau.
+model PricingRule {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  fieldId    String    @db.Uuid
+  /// Jours ISO concernés (1 = lundi … 7 = dimanche).
+  weekdays   Int[]
+  startMin   Int
+  endMin     Int
+  priceMinor Int
+  priority   Int       @default(0)
+  validFrom  DateTime? @db.Date
+  validTo    DateTime? @db.Date
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([fieldId, isActive])
+}
+
+// ───────────────── Réservation, paiement, commission ─────────────────
+
+model Booking {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  /// Référence lisible communiquée au client et au complexe (ex. FF-7K2M9Q).
+  reference     String        @unique
+  /// Client. Nul pour un BLOCK, ou une réservation manuelle d'un client sans compte.
+  userId        String?       @db.Uuid
+  customerName  String?
+  customerPhone String?
+  fieldId       String        @db.Uuid
+  /// Dénormalisé depuis Field : isolation multi-tenant et requêtes du dashboard sans jointure.
+  venueId       String        @db.Uuid
+  startsAt      DateTime      @db.Timestamptz(3)
+  endsAt        DateTime      @db.Timestamptz(3)
+  status        BookingStatus @default(PENDING_PAYMENT)
+  source        BookingSource @default(WEB)
+  bookingType   BookingType   @default(STANDARD)
+  paymentMode   PaymentMode   @default(DEPOSIT)
+  /// Fin du verrou temporaire tant que le statut est PENDING_PAYMENT.
+  holdExpiresAt DateTime?     @db.Timestamptz(3)
+
+  // ── Snapshot financier : figé à la création, jamais recalculé ──
+  /// Prix du terrain pour ce créneau.
+  basePriceMinor       Int     @default(0)
+  /// Règle de commission appliquée (traçabilité) et valeurs figées.
+  commissionRuleId     String? @db.Uuid
+  commissionRateBps    Int     @default(0)
+  commissionFixedMinor Int     @default(0)
+  /// Commission = floor(base × rateBps / 10 000) + fixe.
+  commissionMinor      Int     @default(0)
+  /// Part de la plateforme (= commission au MVP ; prévoit d'éventuels frais de service).
+  platformAmountMinor  Int     @default(0)
+  /// Part du complexe = base − commission.
+  venueAmountMinor     Int     @default(0)
+  feesMinor            Int     @default(0)
+  taxMinor             Int     @default(0)
+  /// Montant total dû par le client = base + frais + taxes.
+  totalMinor           Int     @default(0)
+  /// Part à payer en ligne (acompte ou totalité) et solde à régler sur place.
+  dueOnlineMinor       Int     @default(0)
+  dueOnSiteMinor       Int     @default(0)
+  currency             String  @default("DZD")
+
+  note               String?
+  cancelledAt        DateTime? @db.Timestamptz(3)
+  cancelledById      String?   @db.Uuid
+  cancellationReason String?
+  createdById        String?   @db.Uuid
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+
+  customer        User?            @relation("BookingCustomer", fields: [userId], references: [id], onDelete: Restrict)
+  canceller       User?            @relation("BookingCanceller", fields: [cancelledById], references: [id], onDelete: Restrict)
+  creator         User?            @relation("BookingCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  field           Field            @relation(fields: [fieldId, venueId], references: [id, venueId])
+  venue           Venue            @relation(fields: [venueId], references: [id])
+  commissionRule  CommissionRule?  @relation(fields: [commissionRuleId], references: [id])
+  payments        Payment[]
+  refunds         Refund[]
+  soloSession     SoloSession?
+  opponentListing OpponentListing?
+  match           Match?
+  review          Review?
+
+  @@index([venueId, startsAt])
+  @@index([fieldId, startsAt])
+  @@index([userId, startsAt])
+  @@index([status, startsAt])
+}
+
+model Payment {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  bookingId      String        @db.Uuid
+  /// "fake" (dev/test) ou identifiant du fournisseur réel.
+  provider       String
+  /// Référence chez le fournisseur (unique par fournisseur).
+  providerRef    String?
+  kind           PaymentKind
+  amountMinor    Int
+  currency       String        @default("DZD")
+  status         PaymentStatus @default(INITIATED)
+  /// Clé d'idempotence : rejouer la même demande ne crée jamais un second paiement.
+  idempotencyKey String        @unique
+  checkoutUrl    String?
+  failureReason  String?
+  paidAt         DateTime?     @db.Timestamptz(3)
+  /// Réponse brute du fournisseur, conservée pour audit et litiges.
+  rawPayload     Json?
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  booking Booking  @relation(fields: [bookingId], references: [id])
+  refunds Refund[]
+
+  @@unique([provider, providerRef])
+  @@index([bookingId])
+  @@index([status])
+}
+
+model Refund {
+  id            String       @id @default(uuid(7)) @db.Uuid
+  paymentId     String       @db.Uuid
+  bookingId     String       @db.Uuid
+  amountMinor   Int
+  reason        String?
+  status        RefundStatus @default(REQUESTED)
+  requestedById String?      @db.Uuid
+  approvedById  String?      @db.Uuid
+  providerRef   String?
+  createdAt     DateTime     @default(now()) @db.Timestamptz(3)
+  processedAt   DateTime?    @db.Timestamptz(3)
+
+  payment   Payment @relation(fields: [paymentId], references: [id])
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  requester User?   @relation("RefundRequester", fields: [requestedById], references: [id], onDelete: Restrict)
+  approver  User?   @relation("RefundApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@index([bookingId])
+  @@index([status])
+}
+
+/// Règles de commission configurables par l'admin — jamais de taux en dur dans le code.
+/// Priorité de résolution : VENUE > BOOKING_TYPE > GLOBAL (la règle active la plus spécifique l'emporte).
+model CommissionRule {
+  id          String          @id @default(uuid(7)) @db.Uuid
+  scope       CommissionScope
+  venueId     String?         @db.Uuid
+  bookingType BookingType?
+  /// Points de base : 100 = 1 %.
+  rateBps     Int
+  /// Commission fixe ajoutée (unité mineure).
+  fixedMinor  Int             @default(0)
+  validFrom   DateTime        @default(now()) @db.Timestamptz(3)
+  validTo     DateTime?       @db.Timestamptz(3)
+  isActive    Boolean         @default(true)
+  createdById String?         @db.Uuid
+  createdAt   DateTime        @default(now()) @db.Timestamptz(3)
+
+  venue     Venue?    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation(fields: [createdById], references: [id])
+  bookings  Booking[]
+
+  @@index([scope, isActive])
+  @@index([venueId])
+}
+
+/// Événements webhook reçus des fournisseurs de paiement. L'unicité (provider, eventId)
+/// rend le traitement idempotent même si le fournisseur renvoie plusieurs fois le même événement.
+model WebhookEvent {
+  id          String             @id @default(uuid(7)) @db.Uuid
+  provider    String
+  eventId     String
+  type        String
+  payload     Json
+  status      WebhookEventStatus @default(RECEIVED)
+  error       String?
+  receivedAt  DateTime           @default(now()) @db.Timestamptz(3)
+  processedAt DateTime?          @db.Timestamptz(3)
+
+  @@unique([provider, eventId])
+  @@index([status, receivedAt])
+}
+
+/// Idempotence des requêtes API sensibles (en-tête Idempotency-Key).
+model IdempotencyKey {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  key            String
+  userId         String   @db.Uuid
+  /// "POST /api/v1/bookings"
+  endpoint       String
+  /// Empreinte du corps : une même clé avec un corps différent est rejetée.
+  requestHash    String
+  responseStatus Int?
+  responseBody   Json?
+  createdAt      DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt      DateTime @db.Timestamptz(3)
+
+  @@unique([userId, key, endpoint])
+  @@index([expiresAt])
+}
+
+/// Paramètres globaux modifiables par l'admin (durée du hold, acompte par défaut, etc.).
+model PlatformSetting {
+  key         String   @id
+  value       Json
+  updatedById String?  @db.Uuid
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  updatedBy User? @relation(fields: [updatedById], references: [id])
+}
+
+// ───────────────── Social : sessions, adversaires, matchs ─────────────────
+
+/// Session "Complétez votre équipe". Toujours rattachée à une réservation confirmée
+/// (créée par un joueur-hôte ou par le complexe).
+model SoloSession {
+  id                  String            @id @default(uuid(7)) @db.Uuid
+  bookingId           String            @unique @db.Uuid
+  origin              SoloSessionOrigin @default(PLAYER)
+  createdById         String            @db.Uuid
+  venueId             String            @db.Uuid
+  fieldId             String            @db.Uuid
+  /// Dénormalisés depuis la réservation pour filtrer/trier sans jointure.
+  startsAt            DateTime          @db.Timestamptz(3)
+  endsAt              DateTime          @db.Timestamptz(3)
+  /// Nombre de places à pourvoir (≤ capacité du terrain). CHECK en base.
+  capacity            Int
+  /// Compteur maintenu sous verrou de ligne (SELECT … FOR UPDATE) : jamais de surbooking.
+  joinedCount         Int               @default(0)
+  minPlayers          Int?
+  level               PlayerLevel?
+  pricePerPlayerMinor Int               @default(0)
+  status              SoloSessionStatus @default(OPEN)
+  description         String?
+  createdAt           DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @db.Timestamptz(3)
+
+  booking   Booking      @relation(fields: [bookingId], references: [id])
+  createdBy User         @relation(fields: [createdById], references: [id])
+  venue     Venue        @relation(fields: [venueId], references: [id])
+  players   SoloPlayer[]
+  match     Match?
+
+  @@index([status, startsAt])
+  @@index([venueId, startsAt])
+}
+
+model SoloPlayer {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  sessionId String           @db.Uuid
+  userId    String           @db.Uuid
+  status    SoloPlayerStatus @default(JOINED)
+  joinedAt  DateTime         @default(now()) @db.Timestamptz(3)
+  leftAt    DateTime?        @db.Timestamptz(3)
+
+  session SoloSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id])
+
+  @@unique([sessionId, userId])
+  @@index([userId])
+}
+
+/// Annonce "Nous cherchons un adversaire", rattachée à une réservation de l'équipe annonceuse.
+model OpponentListing {
+  id             String                @id @default(uuid(7)) @db.Uuid
+  teamId         String                @db.Uuid
+  bookingId      String                @unique @db.Uuid
+  createdById    String                @db.Uuid
+  venueId        String                @db.Uuid
+  fieldId        String                @db.Uuid
+  startsAt       DateTime              @db.Timestamptz(3)
+  playersPerSide Int
+  level          PlayerLevel?
+  comment        String?
+  status         OpponentListingStatus @default(OPEN)
+  createdAt      DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(3)
+
+  team      Team           @relation(fields: [teamId], references: [id])
+  booking   Booking        @relation(fields: [bookingId], references: [id])
+  createdBy User           @relation(fields: [createdById], references: [id])
+  venue     Venue          @relation(fields: [venueId], references: [id])
+  requests  MatchRequest[]
+  match     Match?
+
+  @@index([status, startsAt])
+  @@index([teamId])
+}
+
+/// Demande d'une équipe pour affronter l'annonceur.
+/// Un seul ACCEPTED par annonce et une seule demande active par équipe (index partiels, voir migration).
+model MatchRequest {
+  id               String             @id @default(uuid(7)) @db.Uuid
+  listingId        String             @db.Uuid
+  requestingTeamId String             @db.Uuid
+  requestedById    String             @db.Uuid
+  message          String?
+  status           MatchRequestStatus @default(REQUESTED)
+  respondedAt      DateTime?          @db.Timestamptz(3)
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+
+  listing        OpponentListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  requestingTeam Team            @relation(fields: [requestingTeamId], references: [id])
+  requestedBy    User            @relation(fields: [requestedById], references: [id])
+
+  @@index([listingId, status])
+  @@index([requestingTeamId])
+}
+
+model Match {
+  id                String       @id @default(uuid(7)) @db.Uuid
+  source            MatchSource
+  /// Un match = une réservation (créneau réellement occupé).
+  bookingId         String       @unique @db.Uuid
+  venueId           String       @db.Uuid
+  fieldId           String       @db.Uuid
+  startsAt          DateTime     @db.Timestamptz(3)
+  endsAt            DateTime     @db.Timestamptz(3)
+  teamAId           String?      @db.Uuid
+  teamBId           String?      @db.Uuid
+  soloSessionId     String?      @unique @db.Uuid
+  opponentListingId String?      @unique @db.Uuid
+  status            MatchStatus  @default(SCHEDULED)
+  level             PlayerLevel?
+  playersPerSide    Int?
+  scoreA            Int?
+  scoreB            Int?
+  createdById       String       @db.Uuid
+  createdAt         DateTime     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime     @updatedAt @db.Timestamptz(3)
+
+  booking         Booking            @relation(fields: [bookingId], references: [id])
+  venue           Venue              @relation(fields: [venueId], references: [id])
+  teamA           Team?              @relation("MatchTeamA", fields: [teamAId], references: [id])
+  teamB           Team?              @relation("MatchTeamB", fields: [teamBId], references: [id])
+  soloSession     SoloSession?       @relation(fields: [soloSessionId], references: [id])
+  opponentListing OpponentListing?   @relation(fields: [opponentListingId], references: [id])
+  createdBy       User               @relation(fields: [createdById], references: [id])
+  participants    MatchParticipant[]
+
+  @@index([venueId, startsAt])
+  @@index([status, startsAt])
+  @@index([teamAId])
+  @@index([teamBId])
+}
+
+model MatchParticipant {
+  id      String   @id @default(uuid(7)) @db.Uuid
+  matchId String   @db.Uuid
+  userId  String   @db.Uuid
+  side    TeamSide @default(NONE)
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([matchId, userId])
+  @@index([userId])
+}
+
+// ───────────────────────── Transverse ─────────────────────────
+
+model Notification {
+  id        String           @id @default(uuid(7)) @db.Uuid
+  userId    String           @db.Uuid
+  type      NotificationType
+  /// Données nécessaires au rendu côté client (traduit selon la langue de l'utilisateur).
+  payload   Json             @default("{}")
+  readAt    DateTime?        @db.Timestamptz(3)
+  createdAt DateTime         @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+}
+
+/// Un avis par réservation, uniquement après une réservation COMPLETED (contrôlé par le service).
+model Review {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  bookingId String    @unique @db.Uuid
+  userId    String    @db.Uuid
+  venueId   String    @db.Uuid
+  /// 1..5 (CHECK en base).
+  rating    Int
+  comment   String?
+  hiddenAt  DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  venue   Venue   @relation(fields: [venueId], references: [id])
+
+  @@index([venueId, createdAt])
+}
+
+/// Journal d'audit : INSERT uniquement. Un trigger SQL interdit tout UPDATE / DELETE.
+model AuditLog {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  actorId    String?  @db.Uuid
+  /// "ADMIN", "VENUE_OWNER", "USER", "SYSTEM"…
+  actorRole  String
+  action     String
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  userAgent  String?
+  requestId  String?
+  createdAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}

@@ -3,8 +3,9 @@
 Plateforme de réservation de terrains de **Foot Five** et de mise en relation :
 réservez un créneau, complétez votre équipe, trouvez un adversaire.
 
-> **Statut : développement en cours** — étape 1/11 (fondations) terminée.
+> **Statut : développement en cours** — étapes 1 (fondations) et 2 (base de données) terminées sur 11.
 > La documentation complète (architecture, déploiement, comptes de démo) sera finalisée en fin de projet.
+> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md).
 
 ## Stack
 
@@ -31,16 +32,43 @@ docs/         Documentation d'architecture
 
 ## Démarrage rapide
 
-Prérequis : Node.js ≥ 22, pnpm (`npm i -g pnpm`), Docker Desktop.
+Prérequis : Node.js ≥ 22, pnpm (`npm i -g pnpm`), PostgreSQL 16 (via Docker **ou** installé sur la machine).
 
 ```bash
 pnpm install
-cp .env.example .env        # puis adapter si besoin
-pnpm db:up                  # PostgreSQL (port 5433), Mailpit (8025), MinIO (9001)
+cp .env.example .env        # puis adapter le port de la base (voir ci-dessous)
 pnpm build                  # construit packages/shared (requis par api et web)
+pnpm --filter @footfive/api db:migrate   # applique les migrations
+pnpm --filter @footfive/api db:seed      # commission globale 1 % + paramètres par défaut
 pnpm --filter @footfive/api dev
 pnpm --filter @footfive/web dev
 ```
+
+### Base de données : deux options
+
+**A. Docker** (recommandé) : `pnpm db:up` démarre PostgreSQL (port **5433**), Mailpit (8025) et MinIO (9001).
+La base `footfive_test` et les extensions sont créées automatiquement.
+
+**B. PostgreSQL installé sur la machine** (port **5432**) : exécutez une fois, en superutilisateur,
+
+```powershell
+& 'C:\Program Files\PostgreSQL\16\bin\psql.exe' -U postgres -h localhost -f scripts/db/setup-local.sql
+```
+
+Le script crée le rôle `footfive` (non-superuser), les bases `footfive` et `footfive_test` en UTF-8 et
+les extensions. Mettez ensuite le bon port dans `.env` (`DATABASE_URL`, `TEST_DATABASE_URL`).
+
+### Tests
+
+```bash
+pnpm test                                        # tout
+pnpm --filter @footfive/api exec vitest run --project unit          # sans base de données
+pnpm --filter @footfive/api exec vitest run --project integration   # vraie base *_test
+```
+
+Les tests d'intégration utilisent **une vraie base PostgreSQL** (jamais celle de développement : ils refusent
+de démarrer si le nom de la base ne finit pas par `_test`). C'est indispensable pour tester la concurrence
+de réservation et les contraintes.
 
 - API : <http://localhost:3000/api/v1/health>
 - Web : <http://localhost:5173>
