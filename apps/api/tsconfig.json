@@ -1,0 +1,14 @@
+{
+  "extends": "@footfive/config/tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir": "./dist",
+    "noEmit": true,
+    "sourceMap": true
+  },
+  "include": ["src", "test", "vitest.config.ts"]
+}

@@ -1,0 +1,27 @@
+node_modules/
+dist/
+build/
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Environnements (ne jamais committer de secrets)
+.env
+.env.*
+!.env.example
+
+# Uploads locaux (stockage dev)
+apps/api/storage/
+
+# Logs & OS
+*.log
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Caches locaux (ex. binaire SWC)
+.cache/

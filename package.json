@@ -1,0 +1,27 @@
+{
+  "name": "foot-five",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Plateforme de réservation et de mise en relation pour le Foot Five",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose -f docker/compose.dev.yml up -d",
+    "db:down": "docker compose -f docker/compose.dev.yml down",
+    "db:logs": "docker compose -f docker/compose.dev.yml logs -f"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.7",
+    "typescript": "6.0.3"
+  }
+}
