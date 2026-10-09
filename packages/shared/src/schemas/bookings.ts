@@ -184,6 +184,8 @@ export interface BookingView {
   cancellationReason: string | null;
   createdAt: string;
   cancellation: CancellationInfo;
+  /** Dernier paiement tenté pour cette réservation (null s'il n'y en a pas). */
+  payment: { id: string; status: string; checkoutUrl: string | null } | null;
 }
 
 export interface BookingListResponse {

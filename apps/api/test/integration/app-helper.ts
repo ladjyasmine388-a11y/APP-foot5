@@ -5,7 +5,7 @@ import { Test } from '@nestjs/testing';
 import type { LightMyRequestResponse } from 'fastify';
 import { SignJWT } from 'jose';
 import { AppModule } from '../../src/app.module.js';
-import { configureApp, createAdapter } from '../../src/app.setup.js';
+import { NEST_APP_OPTIONS, configureApp, createAdapter } from '../../src/app.setup.js';
 import { loadEnv } from '../../src/infra/config/env.js';
 import { Mailer, type MailMessage } from '../../src/infra/mail/mailer.js';
 import { RateLimitStore } from '../../src/modules/auth/rate-limit/rate-limit.store.js';
@@ -56,7 +56,10 @@ export async function createTestApp(extraControllers: Type[] = []): Promise<Test
     .useValue(mailer)
     .compile();
 
-  const app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter());
+  const app = moduleRef.createNestApplication<NestFastifyApplication>(
+    createAdapter(),
+    NEST_APP_OPTIONS,
+  );
   await configureApp(app, loadEnv());
   await app.init();
   await app.getHttpAdapter().getInstance().ready();

@@ -8,6 +8,7 @@ import {
 import { ENV } from '../../infra/config/config.module.js';
 import type { Env } from '../../infra/config/env.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
+import { DomainEvents } from '../../infra/events/domain-events.js';
 import { IdempotencyService } from './idempotency.service.js';
 
 const INTERVAL_MS = 30_000;
@@ -42,6 +43,7 @@ export class BookingsMaintenanceService implements OnModuleInit, OnModuleDestroy
   constructor(
     private readonly prisma: PrismaService,
     private readonly idempotency: IdempotencyService,
+    private readonly events: DomainEvents,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -63,6 +65,7 @@ export class BookingsMaintenanceService implements OnModuleInit, OnModuleDestroy
   }
 
   async runOnce(now: Date = new Date()): Promise<MaintenanceResult> {
+    let expiredIds: string[] = [];
     const result = await this.prisma.$transaction(
       async (tx): Promise<Omit<MaintenanceResult, 'purgedKeys'>> => {
         const [lock] = await tx.$queryRaw<
@@ -70,10 +73,12 @@ export class BookingsMaintenanceService implements OnModuleInit, OnModuleDestroy
         >`SELECT pg_try_advisory_xact_lock(727001) AS locked`;
         if (!lock?.locked) return { expiredHolds: 0, completedBookings: 0, ran: false };
 
-        const expired = await tx.booking.updateMany({
-          where: { status: 'PENDING_PAYMENT', holdExpiresAt: { lte: now } },
-          data: { status: 'EXPIRED' },
-        });
+        // RETURNING id : on a besoin des identifiants pour annuler les paiements encore ouverts chez le prestataire.
+        const expired = await tx.$queryRaw<{ id: string }[]>`
+        UPDATE "Booking" SET "status" = 'EXPIRED', "updatedAt" = now()
+        WHERE "status" = 'PENDING_PAYMENT' AND "holdExpiresAt" <= ${now}
+        RETURNING "id"`;
+        expiredIds = expired.map((row) => row.id);
 
         // UPDATE … RETURNING : on ne compte pour les statistiques QUE les lignes réellement passées à COMPLETED
         // (une annulation simultanée ne peut pas être comptée comme un match joué).
@@ -92,9 +97,13 @@ export class BookingsMaintenanceService implements OnModuleInit, OnModuleDestroy
           UPDATE "PlayerStats" SET "matchesPlayed" = "matchesPlayed" + ${count}, "updatedAt" = now()
           WHERE "userId" = ${userId}::uuid`;
         }
-        return { expiredHolds: expired.count, completedBookings: completed.length, ran: true };
+        return { expiredHolds: expired.length, completedBookings: completed.length, ran: true };
       },
     );
+
+    // Après la validation : le prestataire de paiement ne doit plus accepter de règlement pour ces réservations.
+    if (expiredIds.length > 0)
+      await this.events.emit('booking.expired', { bookingIds: expiredIds });
 
     const purgedKeys = result.ran ? await this.idempotency.purgeExpired(now) : 0;
     return { ...result, purgedKeys };

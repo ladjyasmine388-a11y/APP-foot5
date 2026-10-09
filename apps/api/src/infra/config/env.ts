@@ -11,6 +11,8 @@ const baseSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: positiveInt(3000, 1, 65535),
   WEB_ORIGIN: z.string().url(),
+  /** Adresse publique de l'API (pages de paiement du prestataire simulé). Défaut : http://localhost:<API_PORT>. */
+  API_PUBLIC_URL: z.string().url().optional(),
 
   DATABASE_URL: z.string().min(1),
 

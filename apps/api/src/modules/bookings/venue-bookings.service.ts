@@ -11,6 +11,7 @@ import { AppException, Errors } from '../../common/errors/app-exception.js';
 import type { RequestContext } from '../../common/http/request-context.js';
 import { localToUtc } from '../../common/time/zoned-time.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
+import { DomainEvents } from '../../infra/events/domain-events.js';
 import { AuditService } from '../audit/audit.service.js';
 import { AvailabilityService } from '../availability/availability.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
@@ -48,6 +49,7 @@ export class VenueBookingsService {
     private readonly writer: BookingWriter,
     private readonly refunds: RefundsService,
     private readonly audit: AuditService,
+    private readonly events: DomainEvents,
   ) {}
 
   // ───────────────────────── Calendrier ─────────────────────────
@@ -293,7 +295,7 @@ export class VenueBookingsService {
       status === 'PENDING_PAYMENT' || (status === 'CONFIRMED' && row.startsAt > now);
     if (!cancellable) throw notCancellable('Cette réservation ne peut plus être annulée');
 
-    const refundRequestedMinor = await this.prisma.$transaction(async (tx) => {
+    const requested = await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.booking.updateMany({
         where: { id: bookingId, venueId, status: { in: ['PENDING_PAYMENT', 'CONFIRMED'] } },
         data: {
@@ -306,7 +308,7 @@ export class VenueBookingsService {
       });
       if (claimed.count === 0) throw notCancellable('Cette réservation vient d’être modifiée');
 
-      const requested = await this.refunds.requestFullRefund(tx, {
+      const result = await this.refunds.requestFullRefund(tx, {
         bookingId,
         reason: `Annulation par le complexe : ${input.reason}`,
         requestedById: user.id,
@@ -319,17 +321,23 @@ export class VenueBookingsService {
           entityType: 'Booking',
           entityId: bookingId,
           before: { status },
-          after: { status: 'CANCELLED', refundMinor: requested, reason: input.reason },
+          after: { status: 'CANCELLED', refundMinor: result.totalMinor, reason: input.reason },
         },
         ctx,
         tx,
       );
-      return requested;
+      return result;
     });
+
+    // Effets de bord APRÈS la validation : annuler un paiement en cours, exécuter le remboursement.
+    await this.events.emit('booking.cancelled', { bookingId, by: 'VENUE' });
+    if (requested.refundIds.length > 0) {
+      await this.events.emit('refund.requested', { refundIds: requested.refundIds });
+    }
 
     return {
       booking: toManageBookingView(await this.findOwned(venueId, bookingId), now),
-      refundRequestedMinor,
+      refundRequestedMinor: requested.totalMinor,
     };
   }
 

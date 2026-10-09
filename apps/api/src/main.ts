@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { AppModule } from './app.module.js';
-import { configureApp, createAdapter } from './app.setup.js';
+import { NEST_APP_OPTIONS, configureApp, createAdapter } from './app.setup.js';
 import { loadEnv } from './infra/config/env.js';
 
 // En développement, charge le .env de la racine du dépôt. Jamais en production : la configuration
@@ -20,7 +20,11 @@ async function bootstrap(): Promise<void> {
   // Valide la configuration AVANT toute initialisation : on échoue vite et clairement.
   const env = loadEnv();
 
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, createAdapter());
+  const app = await NestFactory.create<NestFastifyApplication>(
+    AppModule,
+    createAdapter(),
+    NEST_APP_OPTIONS,
+  );
   await configureApp(app, env);
 
   await app.listen({ port: env.API_PORT, host: '0.0.0.0' });

@@ -38,6 +38,13 @@ export const ERROR_CODES = [
   'IDEMPOTENCY_KEY_REUSED',
   /** Une requête avec cette Idempotency-Key est encore en cours de traitement. */
   'REQUEST_IN_PROGRESS',
+  // Paiement
+  /** La réservation n'est plus payable (annulée, expirée, déjà confirmée, rien à payer en ligne). */
+  'BOOKING_NOT_PAYABLE',
+  /** Le prestataire de paiement est indisponible ou a refusé la demande : réessayer plus tard. */
+  'PAYMENT_PROVIDER_ERROR',
+  /** Signature de webhook absente, invalide ou trop ancienne. */
+  'INVALID_WEBHOOK_SIGNATURE',
   // Compte
   'ACCOUNT_HAS_UPCOMING_BOOKINGS',
   'ACCOUNT_IS_TEAM_CAPTAIN',

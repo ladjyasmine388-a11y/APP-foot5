@@ -9,6 +9,14 @@ import type { Env } from './infra/config/env.js';
 import { setupOpenApi } from './openapi.js';
 
 export const API_PREFIX = 'api/v1';
+
+/**
+ * Options de création de l'application, communes au démarrage réel ET aux tests.
+ * `rawBody` : Nest conserve les OCTETS EXACTS du corps JSON dans `request.rawBody`. Les webhooks de paiement en ont
+ * besoin : une signature se calcule sur le message reçu tel quel, le re-sérialiser après analyse (espace, ordre des
+ * clés) la ferait échouer.
+ */
+export const NEST_APP_OPTIONS = { rawBody: true } as const;
 const REQUEST_ID_HEADER = 'x-request-id';
 const SAFE_REQUEST_ID = /^[\w-]{8,64}$/;
 
@@ -58,12 +66,11 @@ export async function configureApp(app: NestFastifyApplication, env: Env): Promi
     timeWindow: '1 minute',
   });
 
-  app
-    .getHttpAdapter()
-    .getInstance()
-    .addHook('onSend', async (request, reply) => {
-      reply.header(REQUEST_ID_HEADER, request.id);
-    });
+  const fastify = app.getHttpAdapter().getInstance();
+
+  fastify.addHook('onSend', async (request, reply) => {
+    reply.header(REQUEST_ID_HEADER, request.id);
+  });
 
   if (env.OPENAPI_ENABLED ?? env.NODE_ENV !== 'production') {
     setupOpenApi(app);

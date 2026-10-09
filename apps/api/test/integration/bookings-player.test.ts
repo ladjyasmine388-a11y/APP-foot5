@@ -881,6 +881,7 @@ describe('réservation côté joueur', () => {
             kind: 'DEPOSIT',
             amountMinor: 800,
             status: 'SUCCEEDED',
+            paidAt: new Date(),
             idempotencyKey: randomUUID(),
           },
           {
@@ -926,6 +927,7 @@ describe('réservation côté joueur', () => {
           kind: 'DEPOSIT',
           amountMinor: 800,
           status: 'SUCCEEDED',
+          paidAt: new Date(),
           idempotencyKey: randomUUID(),
         },
       });
@@ -968,7 +970,8 @@ describe('réservation côté joueur', () => {
       expect(refunds[0]).toMatchObject({
         paymentId: payment.id,
         amountMinor: 800,
-        status: 'REQUESTED',
+        // Le statut final dépend de l'exécution chez le prestataire (ici, un paiement sans référence chez lui) :
+        // l'exécution complète est vérifiée dans payments.test.ts.
         requestedById: user.userId,
       });
     });
@@ -991,6 +994,7 @@ describe('réservation côté joueur', () => {
           kind: 'DEPOSIT',
           amountMinor: 800,
           status: 'SUCCEEDED',
+          paidAt: new Date(),
           idempotencyKey: randomUUID(),
         },
       });
@@ -1023,6 +1027,7 @@ describe('réservation côté joueur', () => {
           kind: 'DEPOSIT',
           amountMinor: 800,
           status: 'SUCCEEDED',
+          paidAt: new Date(),
           idempotencyKey: randomUUID(),
         },
       });

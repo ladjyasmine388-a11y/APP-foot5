@@ -593,6 +593,7 @@ describe('réservations vues par le complexe', () => {
           kind: 'DEPOSIT',
           amountMinor: 800,
           status: 'SUCCEEDED',
+          paidAt: new Date(),
           idempotencyKey: randomUUID(),
         },
       });
@@ -619,7 +620,7 @@ describe('réservations vues par le complexe', () => {
       expect(refund).toMatchObject({
         paymentId: payment.id,
         amountMinor: 800,
-        status: 'REQUESTED',
+        // Statut final = exécution chez le prestataire, vérifiée dans payments.test.ts.
         requestedById: s.manager.userId,
       });
       expect(

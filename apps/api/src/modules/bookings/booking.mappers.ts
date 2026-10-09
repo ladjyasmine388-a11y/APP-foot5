@@ -16,7 +16,10 @@ export const bookingInclude = {
     },
   },
   field: { select: { id: true, name: true } },
-  payments: { select: { amountMinor: true, status: true } },
+  payments: {
+    select: { id: true, amountMinor: true, status: true, checkoutUrl: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+  },
 } satisfies Prisma.BookingInclude;
 export type BookingWithRelations = Prisma.BookingGetPayload<{ include: typeof bookingInclude }>;
 
@@ -52,6 +55,18 @@ export function paidOnlineMinor(
   return payments
     .filter((p) => p.status === 'SUCCEEDED' || p.status === 'PARTIALLY_REFUNDED')
     .reduce((sum, p) => sum + p.amountMinor, 0);
+}
+
+/** Dernier paiement (le plus récent) ; l'adresse de paiement n'est donnée que tant qu'il est en cours. */
+function latestPayment(payments: BookingWithRelations['payments']): BookingView['payment'] {
+  const latest = payments[0];
+  if (!latest) return null;
+  const inFlight = latest.status === 'INITIATED' || latest.status === 'PENDING';
+  return {
+    id: latest.id,
+    status: latest.status,
+    checkoutUrl: inFlight ? latest.checkoutUrl : null,
+  };
 }
 
 export function toBookingView(
@@ -106,6 +121,7 @@ export function toBookingView(
           initiator: 'PLAYER',
         }).eligible,
     },
+    payment: latestPayment(row.payments),
   };
 }
 

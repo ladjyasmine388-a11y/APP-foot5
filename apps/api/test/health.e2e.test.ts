@@ -2,7 +2,7 @@ import { Test } from '@nestjs/testing';
 import type { NestFastifyApplication } from '@nestjs/platform-fastify';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppModule } from '../src/app.module.js';
-import { configureApp, createAdapter } from '../src/app.setup.js';
+import { NEST_APP_OPTIONS, configureApp, createAdapter } from '../src/app.setup.js';
 import { loadEnv } from '../src/infra/config/env.js';
 
 describe('GET /api/v1/health', () => {
@@ -10,7 +10,10 @@ describe('GET /api/v1/health', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = moduleRef.createNestApplication<NestFastifyApplication>(createAdapter());
+    app = moduleRef.createNestApplication<NestFastifyApplication>(
+      createAdapter(),
+      NEST_APP_OPTIONS,
+    );
     await configureApp(app, loadEnv());
     await app.init();
     await app.getHttpAdapter().getInstance().ready();

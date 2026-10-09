@@ -15,6 +15,7 @@ import type { RequestContext } from '../../common/http/request-context.js';
 import { ENV } from '../../infra/config/config.module.js';
 import type { Env } from '../../infra/config/env.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
+import { DomainEvents } from '../../infra/events/domain-events.js';
 import { AuditService } from '../audit/audit.service.js';
 import { type FoundSlot, AvailabilityService } from '../availability/availability.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
@@ -46,6 +47,7 @@ export class BookingsService {
     private readonly writer: BookingWriter,
     private readonly refunds: RefundsService,
     private readonly audit: AuditService,
+    private readonly events: DomainEvents,
     @Inject(ENV) private readonly env: Env,
   ) {}
 
@@ -235,6 +237,7 @@ export class BookingsService {
       initiator: 'PLAYER',
     });
 
+    let refundIds: string[] = [];
     await this.prisma.$transaction(async (tx) => {
       // Passage conditionnel à CANCELLED : si un paiement vient de confirmer la réservation, ou si deux annulations
       // arrivent ensemble, une seule transition réussit.
@@ -251,11 +254,12 @@ export class BookingsService {
       if (claimed.count === 0) throw notCancellable('CANCELLED');
 
       if (decision.eligible) {
-        await this.refunds.requestFullRefund(tx, {
+        const requested = await this.refunds.requestFullRefund(tx, {
           bookingId: id,
           reason: 'Annulation par le joueur',
           requestedById: user.id,
         });
+        refundIds = requested.refundIds;
       }
       await this.audit.record(
         {
@@ -275,6 +279,10 @@ export class BookingsService {
         tx,
       );
     });
+
+    // Effets de bord APRÈS la validation : annuler un paiement en cours chez le prestataire, exécuter le remboursement.
+    await this.events.emit('booking.cancelled', { bookingId: id, by: 'PLAYER' });
+    if (refundIds.length > 0) await this.events.emit('refund.requested', { refundIds });
 
     const updated = await this.prisma.booking.findUniqueOrThrow({
       where: { id },
