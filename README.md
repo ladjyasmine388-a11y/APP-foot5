@@ -3,9 +3,9 @@
 Plateforme de réservation de terrains de **Foot Five** et de mise en relation :
 réservez un créneau, complétez votre équipe, trouvez un adversaire.
 
-> **Statut : développement en cours** — étapes 1 à 6 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements).
+> **Statut : développement en cours** — étapes 1 à 7 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs).
 > La documentation complète (architecture, déploiement, comptes de démo) sera finalisée en fin de projet.
-> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · API interactive : <http://localhost:3000/api/docs>.
+> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · API interactive : <http://localhost:3000/api/docs>.
 
 ## Stack
 

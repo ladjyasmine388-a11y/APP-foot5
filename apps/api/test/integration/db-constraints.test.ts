@@ -399,7 +399,7 @@ describe('adversaires et matchs', () => {
     const [capA, capB, capC] = await Promise.all([makeUser(), makeUser(), makeUser()]);
     const [teamA, teamB, teamC] = await Promise.all(
       [capA, capB, capC].map((c, i) =>
-        prisma.team.create({ data: { name: `Équipe ${i}`, captainId: c.id } }),
+        prisma.team.create({ data: { name: `Équipe ${i} ${c.id.slice(-8)}`, captainId: c.id } }),
       ),
     );
     const booking = await prisma.booking.create({

@@ -14,6 +14,30 @@ export interface DomainEventMap {
   'booking.cancelled': { bookingId: string; by: 'PLAYER' | 'VENUE' | 'SYSTEM' };
   'booking.expired': { bookingIds: string[] };
   'refund.requested': { refundIds: string[] };
+
+  // Équipes
+  'team.invitation_created': {
+    invitationId: string;
+    teamId: string;
+    inviteeId: string | null;
+    inviteeEmail: string | null;
+  };
+  'team.invitation_accepted': { teamId: string; userId: string };
+  'team.member_removed': { teamId: string; userId: string };
+
+  // Sessions « Complétez votre équipe »
+  'solo.player_joined': { sessionId: string; userId: string; remaining: number };
+  'solo.player_left': { sessionId: string; userId: string; remaining: number };
+  'solo.full': { sessionId: string };
+  'solo.cancelled': { sessionId: string; playerIds: string[] };
+
+  // Trouvez un adversaire
+  'opponent.request_created': { requestId: string; listingId: string };
+  'opponent.request_accepted': { requestId: string; listingId: string; matchId: string };
+  'opponent.request_rejected': { requestId: string; listingId: string };
+
+  // Matchs
+  'match.cancelled': { matchId: string; participantIds: string[] };
 }
 
 export type DomainEventName = keyof DomainEventMap;

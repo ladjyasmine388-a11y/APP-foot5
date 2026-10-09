@@ -122,6 +122,20 @@ export function patch(
   });
 }
 
+export function put(
+  { app }: TestApp,
+  url: string,
+  payload: unknown,
+  token?: string,
+): Promise<LightMyRequestResponse> {
+  return app.inject({
+    method: 'PUT',
+    url: `/api/v1${url}`,
+    payload: payload as object,
+    headers: token ? { authorization: `Bearer ${token}` } : {},
+  });
+}
+
 export function del(
   { app }: TestApp,
   url: string,

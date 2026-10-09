@@ -38,6 +38,24 @@ export const ERROR_CODES = [
   'IDEMPOTENCY_KEY_REUSED',
   /** Une requête avec cette Idempotency-Key est encore en cours de traitement. */
   'REQUEST_IN_PROGRESS',
+  // Équipes, sessions, adversaires, matchs
+  /** Réservé au capitaine de l'équipe. */
+  'NOT_CAPTAIN',
+  /** Trop d'équipes dirigées par ce joueur. */
+  'TEAM_LIMIT_REACHED',
+  'TEAM_FULL',
+  /** L'équipe n'a pas assez de membres pour jouer ce format. */
+  'TEAM_TOO_SMALL',
+  'ALREADY_JOINED',
+  'SESSION_FULL',
+  /** Session fermée : annulée, terminée ou déjà commencée. */
+  'SESSION_CLOSED',
+  /** Le joueur a déjà une autre activité sur ce créneau. */
+  'SCHEDULE_CONFLICT',
+  /** Le niveau du joueur n'est pas compatible avec la session. */
+  'LEVEL_INCOMPATIBLE',
+  /** La réservation ne peut pas servir de support (non confirmée, passée, déjà utilisée…). */
+  'BOOKING_NOT_ELIGIBLE',
   // Paiement
   /** La réservation n'est plus payable (annulée, expirée, déjà confirmée, rien à payer en ligne). */
   'BOOKING_NOT_PAYABLE',

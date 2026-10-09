@@ -11,7 +11,12 @@ import { BookingsModule } from './modules/bookings/bookings.module.js';
 import { HealthModule } from './modules/health/health.module.js';
 import { PaymentsModule } from './modules/payments/payments.module.js';
 import { PoliciesModule } from './modules/policies/policies.module.js';
+import { MatchesModule } from './modules/matches/matches.module.js';
+import { MatchingModule } from './modules/matching/matching.module.js';
+import { OpponentsModule } from './modules/opponents/opponents.module.js';
 import { SettingsModule } from './modules/settings/settings.module.js';
+import { SoloSessionsModule } from './modules/solo-sessions/solo-sessions.module.js';
+import { TeamsModule } from './modules/teams/teams.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { VenuesModule } from './modules/venues/venues.module.js';
 
@@ -29,6 +34,11 @@ import { VenuesModule } from './modules/venues/venues.module.js';
     VenuesModule,
     BookingsModule,
     PaymentsModule,
+    MatchingModule,
+    TeamsModule,
+    MatchesModule,
+    SoloSessionsModule,
+    OpponentsModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],
