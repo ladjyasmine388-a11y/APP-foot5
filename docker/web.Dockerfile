@@ -17,7 +17,7 @@ COPY e2e/package.json ./e2e/package.json
 RUN pnpm install --frozen-lockfile --filter @footfive/web...
 RUN pnpm --filter @footfive/shared build && pnpm --filter @footfive/web build
 
-FROM nginx:1.27-alpine AS runtime
+FROM nginx:1.31-alpine AS runtime
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 EXPOSE 80
