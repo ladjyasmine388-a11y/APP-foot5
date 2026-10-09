@@ -3,9 +3,9 @@
 Plateforme de réservation de terrains de **Foot Five** et de mise en relation :
 réservez un créneau, complétez votre équipe, trouvez un adversaire.
 
-> **Statut : développement en cours** — étapes 1 à 8 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images).
+> **Statut : développement en cours** — étapes 1 à 9 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images, administration / tableaux de bord / personnel).
 > La documentation complète (architecture, déploiement, comptes de démo) sera finalisée en fin de projet.
-> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · Notifications, avis, images : [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) · API interactive : <http://localhost:3000/api/docs>.
+> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · Notifications, avis, images : [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) · Administration : [docs/ADMIN.md](docs/ADMIN.md) · API interactive : <http://localhost:3000/api/docs>.
 
 ## Stack
 

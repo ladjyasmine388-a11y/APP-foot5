@@ -125,9 +125,14 @@ const CATALOG: Catalog = {
     ar: ({ s }) => ({ title: 'تمت الموافقة على المجمّع', body: `تمت الموافقة على مجمّعك «${s('venueName')}» وأصبح ظاهرًا للاعبين.` }),
   },
   VENUE_SUSPENDED: {
-    fr: ({ s }) => ({ title: 'Complexe suspendu', body: `Votre complexe « ${s('venueName')} » a été suspendu et n'est plus visible.` }),
-    en: ({ s }) => ({ title: 'Venue suspended', body: `Your venue "${s('venueName')}" has been suspended and is no longer visible.` }),
-    ar: ({ s }) => ({ title: 'تم تعليق المجمّع', body: `تم تعليق مجمّعك «${s('venueName')}» ولم يعد ظاهرًا.` }),
+    fr: ({ s }) => ({ title: 'Complexe suspendu', body: `Votre complexe « ${s('venueName')} » a été suspendu et n'est plus visible. Motif : ${s('reason')}` }),
+    en: ({ s }) => ({ title: 'Venue suspended', body: `Your venue "${s('venueName')}" has been suspended and is no longer visible. Reason: ${s('reason')}` }),
+    ar: ({ s }) => ({ title: 'تم تعليق المجمّع', body: `تم تعليق مجمّعك «${s('venueName')}» ولم يعد ظاهرًا. السبب: ${s('reason')}` }),
+  },
+  VENUE_REJECTED: {
+    fr: ({ s }) => ({ title: 'Complexe refusé', body: `Votre demande pour « ${s('venueName')} » a été refusée. Motif : ${s('reason')}` }),
+    en: ({ s }) => ({ title: 'Venue rejected', body: `Your request for "${s('venueName')}" was rejected. Reason: ${s('reason')}` }),
+    ar: ({ s }) => ({ title: 'تم رفض المجمّع', body: `تم رفض طلبك الخاص بـ «${s('venueName')}». السبب: ${s('reason')}` }),
   },
 };
 
@@ -157,4 +162,5 @@ export const EMAIL_NOTIFICATION_TYPES: ReadonlySet<NotificationType> = new Set<N
   'MATCH_REMINDER',
   'VENUE_APPROVED',
   'VENUE_SUSPENDED',
+  'VENUE_REJECTED',
 ]);

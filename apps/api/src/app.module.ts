@@ -6,6 +6,7 @@ import { PrismaModule } from './infra/database/prisma.module.js';
 import { EventsModule } from './infra/events/domain-events.js';
 import { MailModule } from './infra/mail/mail.module.js';
 import { StorageModule } from './infra/storage/file-storage.js';
+import { AdminModule } from './modules/admin/admin.module.js';
 import { AuditModule } from './modules/audit/audit.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BookingsModule } from './modules/bookings/bookings.module.js';
@@ -47,6 +48,7 @@ import { VenuesModule } from './modules/venues/venues.module.js';
     NotificationsModule,
     ReviewsModule,
     UploadsModule,
+    AdminModule,
     HealthModule,
   ],
   providers: [{ provide: APP_FILTER, useClass: AllExceptionsFilter }],

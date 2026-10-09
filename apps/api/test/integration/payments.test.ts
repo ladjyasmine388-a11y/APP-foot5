@@ -872,6 +872,62 @@ describe('paiements', () => {
       ).toBe(1);
     });
 
+    describe('décisions de l’administration', () => {
+      async function admin() {
+        const user = await verifiedSignup(t);
+        await prisma.user.update({ where: { id: user.userId }, data: { platformRole: 'ADMIN' } });
+        return user;
+      }
+
+      it('relancer un remboursement en échec : nouvelle demande exécutée une seule fois, historique conservé, audité', async () => {
+        const v = await venue();
+        const { user, booking, payment, providerRef } = await paidBooking(v);
+        fake.failNextRefund = true;
+        await cancel(user, booking.id);
+        const failed = await prisma.refund.findFirstOrThrow({ where: { bookingId: booking.id } });
+        expect(failed.status).toBe('FAILED');
+        const boss = await admin();
+
+        expect((await post(t, `/admin/refunds/${failed.id}/retry`, undefined, bearer(user.accessToken))).statusCode).toBe(403); // pas administrateur
+        const retry = await post(t, `/admin/refunds/${failed.id}/retry`, undefined, bearer(boss.accessToken));
+        expect(retry.statusCode).toBe(201);
+
+        const second = await prisma.refund.findUniqueOrThrow({ where: { id: retry.json().refundId } });
+        expect(second).toMatchObject({ status: 'SUCCEEDED', amountMinor: 800, requestedById: boss.userId });
+        expect(second.reason).toContain(failed.id);
+        expect((await prisma.refund.findUniqueOrThrow({ where: { id: failed.id } })).status).toBe('FAILED'); // historique conservé
+        expect((await paymentOf(payment.id)).status).toBe('REFUNDED');
+        expect(fake.refundedMinor(providerRef)).toBe(800);
+        expect(await prisma.auditLog.count({ where: { action: 'refund.retry', entityId: failed.id } })).toBe(1);
+        // Déjà réglé : une seconde relance de l'ancien échec est refusée, rien n'est remboursé deux fois.
+        expect((await post(t, `/admin/refunds/${failed.id}/retry`, undefined, bearer(boss.accessToken))).statusCode).toBe(409);
+        expect(fake.refundedMinor(providerRef)).toBe(800);
+        expect((await post(t, `/admin/refunds/${second.id}/retry`, undefined, bearer(boss.accessToken))).statusCode).toBe(409); // réussi : rien à relancer
+        expect((await post(t, '/admin/refunds/00000000-0000-4000-8000-000000000000/retry', undefined, bearer(boss.accessToken))).statusCode).toBe(404);
+      });
+
+      it('rembourser une réservation payée sur décision de l’administration : montant exact, réservation intacte, pas de double remboursement', async () => {
+        const v = await venue();
+        const { booking, payment, providerRef } = await paidBooking(v);
+        const boss = await admin();
+
+        const res = await post(t, `/admin/bookings/${booking.id}/refund`, { reason: 'Litige : terrain indisponible' }, bearer(boss.accessToken));
+        expect(res.statusCode).toBe(201);
+        expect(res.json().totalMinor).toBe(800);
+        const refund = await prisma.refund.findFirstOrThrow({ where: { bookingId: booking.id } });
+        expect(refund).toMatchObject({ status: 'SUCCEEDED', amountMinor: 800, requestedById: boss.userId });
+        expect(refund.reason).toContain('Litige');
+        expect((await paymentOf(payment.id)).status).toBe('REFUNDED');
+        expect(fake.refundedMinor(providerRef)).toBe(800);
+        expect((await bookingOf(booking.id)).status).toBe('CONFIRMED'); // la réservation n'est pas annulée pour autant
+
+        const again = await post(t, `/admin/bookings/${booking.id}/refund`, { reason: 'Deuxième tentative' }, bearer(boss.accessToken));
+        expect(again.statusCode).toBe(409);
+        expect(fake.refundedMinor(providerRef)).toBe(800);
+        expect((await post(t, `/admin/bookings/${booking.id}/refund`, {}, bearer(boss.accessToken))).statusCode).toBe(400); // motif obligatoire
+      });
+    });
+
     it('panne TEMPORAIRE du prestataire : la demande est remise en file, puis exécutée par la maintenance', async () => {
       const v = await venue();
       const { user, booking, payment, providerRef } = await paidBooking(v);

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { createPgAdapter } from '../../src/infra/database/pg-adapter.js';
 import { expect } from 'vitest';
 import {
   PrismaClient,
@@ -20,7 +20,7 @@ assertTestDatabase();
 
 export const prisma = new PrismaClient({
   // Plusieurs connexions pour pouvoir simuler de vraies requêtes concurrentes.
-  adapter: new PrismaPg({ connectionString: url, max: 20 }),
+  adapter: createPgAdapter(url, { max: 20 }),
 });
 
 /**

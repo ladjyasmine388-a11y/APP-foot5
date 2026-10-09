@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FIELD_SURFACES } from '../enums';
+import { FIELD_SURFACES, type VenueStatus } from '../enums';
 import { rangesOverlap, toMinuteRange } from '../time';
 import { citySchema, phoneSchema } from './primitives';
 
@@ -425,7 +425,7 @@ export interface ManageVenueSummary {
   slug: string;
   name: string;
   city: string;
-  status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+  status: VenueStatus;
   /** Rôle de l'utilisateur dans ce complexe. */
   role: 'OWNER' | 'MANAGER' | 'STAFF' | 'ADMIN';
   fieldsCount: number;
@@ -445,7 +445,7 @@ export interface ManageVenueDetail {
   timezone: string;
   amenities: string[];
   photos: string[];
-  status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+  status: VenueStatus;
   cancellationPolicy: CancellationPolicy | null;
   role: 'OWNER' | 'MANAGER' | 'STAFF' | 'ADMIN';
   /** Horaires du complexe. */

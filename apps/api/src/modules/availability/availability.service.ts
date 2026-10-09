@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import type { ManageSlot, PublicSlot } from '@footfive/shared';
+import type { ManageSlot, PublicSlot, VenueStatus } from '@footfive/shared';
 import { AppException } from '../../common/errors/app-exception.js';
 import { addDays, daysBetween, todayIn } from '../../common/time/zoned-time.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
@@ -25,7 +25,7 @@ export interface FoundSlot {
   venue: {
     id: string;
     name: string;
-    status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+    status: VenueStatus;
     timezone: string;
     depositPolicy: unknown;
     cancellationPolicy: unknown;

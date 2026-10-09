@@ -24,7 +24,7 @@ export type VenueStaffRole = (typeof VENUE_STAFF_ROLES)[number];
 export const TEAM_MEMBER_ROLES = ['CAPTAIN', 'MEMBER'] as const;
 export type TeamMemberRole = (typeof TEAM_MEMBER_ROLES)[number];
 
-export const VENUE_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED'] as const;
+export const VENUE_STATUSES = ['PENDING', 'APPROVED', 'SUSPENDED', 'REJECTED'] as const;
 export type VenueStatus = (typeof VENUE_STATUSES)[number];
 
 /**
@@ -121,6 +121,7 @@ export const NOTIFICATION_TYPES = [
   'MATCH_REMINDER',
   'VENUE_APPROVED',
   'VENUE_SUSPENDED',
+  'VENUE_REJECTED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
