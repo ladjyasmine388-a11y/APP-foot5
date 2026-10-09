@@ -863,6 +863,8 @@ model Match {
   playersPerSide    Int?
   scoreA            Int?
   scoreB            Int?
+  /// Rappel envoyé aux participants (une seule fois, revendiqué atomiquement).
+  reminderSentAt    DateTime?    @db.Timestamptz(3)
   createdById       String       @db.Uuid
   createdAt         DateTime     @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime     @updatedAt @db.Timestamptz(3)

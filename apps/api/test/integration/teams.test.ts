@@ -243,7 +243,8 @@ describe('équipes et invitations', () => {
       const known = await invite(captain, team.id, { email: existing.email });
       expect(known.statusCode).toBe(201);
       expect((await prisma.teamInvitation.findUniqueOrThrow({ where: { id: known.json().id } }))).toMatchObject({ inviteeId: existing.userId, inviteeEmail: null });
-      expect(t.mailer.to(existing.email)).toHaveLength(0); // le compte existant est notifié dans l'application
+      // Un compte existant est prévenu par la notification d'invitation (application + un seul email), pas par l'email « inconnu ».
+      expect(t.mailer.to(existing.email).map((m) => m.subject)).toEqual(['Invitation à rejoindre une équipe — Foot Five']);
 
       const unknown = await invite(captain, team.id, { email: 'Futur.Joueur@Example.com' });
       expect(unknown.statusCode).toBe(201);

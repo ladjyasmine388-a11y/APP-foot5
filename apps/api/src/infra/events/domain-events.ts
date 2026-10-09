@@ -14,6 +14,7 @@ export interface DomainEventMap {
   'booking.cancelled': { bookingId: string; by: 'PLAYER' | 'VENUE' | 'SYSTEM' };
   'booking.expired': { bookingIds: string[] };
   'refund.requested': { refundIds: string[] };
+  'refund.processed': { refundId: string; bookingId: string };
 
   // Équipes
   'team.invitation_created': {
@@ -37,7 +38,8 @@ export interface DomainEventMap {
   'opponent.request_rejected': { requestId: string; listingId: string };
 
   // Matchs
-  'match.cancelled': { matchId: string; participantIds: string[] };
+  /** `venueName` / `startsAt` sont fournis quand le match a été supprimé (retrait de l'adversaire) et ne peut plus être relu. */
+  'match.cancelled': { matchId: string; participantIds: string[]; venueName?: string; startsAt?: string };
 }
 
 export type DomainEventName = keyof DomainEventMap;

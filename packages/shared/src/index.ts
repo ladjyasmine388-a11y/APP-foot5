@@ -7,3 +7,4 @@ export * from './schemas/venues';
 export * from './schemas/bookings';
 export * from './schemas/payments';
 export * from './schemas/social';
+export * from './schemas/engagement';

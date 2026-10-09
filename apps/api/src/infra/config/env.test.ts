@@ -16,6 +16,8 @@ const validProd = {
   JWT_ACCESS_SECRET: 'k3J9xQ2mZp7LwR4vB8nT1yH6cD5fG0sA9uE2oI7',
   PAYMENT_PROVIDER: 'live',
   MAIL_DRIVER: 'smtp',
+  SMTP_HOST: 'smtp.example.com',
+  API_PUBLIC_URL: 'https://api.footfive.example',
   PAYMENT_WEBHOOK_SECRET: 'wh_9d8f7a6b5c4e3d2c1b0a9f8e7d6c5b4a',
 };
 
@@ -60,6 +62,17 @@ describe('loadEnv', () => {
 
     it('INTERDIT le driver d’email « console » en production (il journalise les liens secrets)', () => {
       expect(() => loadEnv({ ...validProd, MAIL_DRIVER: 'console' })).toThrow(/MAIL_DRIVER/);
+    });
+
+    it('exige l’adresse publique de l’API en production', () => {
+      const { API_PUBLIC_URL: _omitted, ...withoutUrl } = validProd;
+      expect(() => loadEnv(withoutUrl)).toThrow(/API_PUBLIC_URL/);
+    });
+
+    it('INTERDIT un serveur SMTP local, et des identifiants SMTP incomplets, en production', () => {
+      expect(() => loadEnv({ ...validProd, SMTP_HOST: 'localhost' })).toThrow(/SMTP_HOST/);
+      expect(() => loadEnv({ ...validProd, SMTP_USER: 'mailer' })).toThrow(/SMTP_PASSWORD/);
+      expect(loadEnv({ ...validProd, SMTP_USER: 'mailer', SMTP_PASSWORD: 'secret', SMTP_SECURE: 'true' }).SMTP_SECURE).toBe(true);
     });
 
     it('INTERDIT les secrets de développement en production', () => {

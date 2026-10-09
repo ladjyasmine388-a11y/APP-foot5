@@ -185,7 +185,7 @@ export class MatchesService {
         await this.audit.record({ actorId: user.id, actorRole: 'USER', action: 'match.withdraw', entityType: 'Match', entityId: id, after: { listingId } }, ctx, tx);
         return true;
       });
-      if (withdrawn) await this.events.emit('match.cancelled', { matchId: id, participantIds });
+      if (withdrawn) await this.events.emit('match.cancelled', { matchId: id, participantIds, venueName: match.venue.name, startsAt: match.startsAt.toISOString() });
       return;
     }
     throw new AppException('NOT_CAPTAIN', HttpStatus.FORBIDDEN, 'Réservé aux capitaines des équipes du match');

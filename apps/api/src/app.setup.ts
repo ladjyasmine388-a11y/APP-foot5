@@ -5,6 +5,7 @@ import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import { UPLOAD_CONTENT_TYPES, UPLOAD_MAX_BYTES } from '@footfive/shared';
 import type { Env } from './infra/config/env.js';
 import { setupOpenApi } from './openapi.js';
 
@@ -32,7 +33,7 @@ export function createAdapter(): FastifyAdapter {
     },
     // Derrière un reverse proxy (production), pour des IP clientes correctes (rate limiting, audit).
     trustProxy: true,
-    // Corps JSON limité : aucune route du MVP n'a besoin de plus (les images passeront par un upload dédié).
+    // Corps JSON limité : les images ont leur propre limite (voir ci-dessous).
     bodyLimit: 100 * 1024,
   });
 }
@@ -67,6 +68,11 @@ export async function configureApp(app: NestFastifyApplication, env: Env): Promi
   });
 
   const fastify = app.getHttpAdapter().getInstance();
+
+  // Envoi d'images : le corps binaire est lu tel quel, avec SA propre limite (le plafond JSON de 100 Ko ne s'applique pas).
+  fastify.addContentTypeParser([...UPLOAD_CONTENT_TYPES], { parseAs: 'buffer', bodyLimit: UPLOAD_MAX_BYTES }, (_request, body, done) => {
+    done(null, body);
+  });
 
   fastify.addHook('onSend', async (request, reply) => {
     reply.header(REQUEST_ID_HEADER, request.id);

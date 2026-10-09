@@ -26,10 +26,14 @@ const baseSchema = z.object({
   PAYMENT_PROVIDER: z.enum(['fake', 'live']).default('fake'),
   PAYMENT_WEBHOOK_SECRET: z.string().min(16),
 
-  /** `console` : affiche les emails dans les journaux (dev/test uniquement). `smtp` : envoi réel (étape 8). */
+  /** `console` : affiche les emails dans les journaux (dev/test uniquement). `smtp` : envoi réel. */
   MAIL_DRIVER: z.enum(['console', 'smtp']).default('console'),
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: positiveInt(1025, 1, 65535),
+  /** TLS implicite (port 465). Sinon STARTTLS est négocié ; il est EXIGÉ en production. */
+  SMTP_SECURE: z.stringbool().default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASSWORD: z.string().optional(),
   MAIL_FROM: z.string().default('Foot Five <no-reply@footfive.local>'),
 
   /** Plafond global de requêtes par IP et par minute (filet de sécurité ; les routes sensibles ont leurs propres limites). */
@@ -63,8 +67,17 @@ const envSchema = baseSchema.superRefine((env, ctx) => {
       fail('PAYMENT_PROVIDER', 'Le fournisseur de paiement simulé est interdit en production');
     }
     // Le driver console écrit les liens de vérification / réinitialisation dans les journaux : jamais en production.
+    if (!env.API_PUBLIC_URL) {
+      fail('API_PUBLIC_URL', 'Requis en production (adresse publique des images envoyées)');
+    }
     if (env.MAIL_DRIVER === 'console') {
       fail('MAIL_DRIVER', 'Le driver d’email « console » est interdit en production');
+    }
+    if (env.MAIL_DRIVER === 'smtp' && ['localhost', '127.0.0.1', '::1'].includes(env.SMTP_HOST)) {
+      fail('SMTP_HOST', 'Un serveur SMTP local est interdit en production');
+    }
+    if (env.MAIL_DRIVER === 'smtp' && !env.SMTP_USER !== !env.SMTP_PASSWORD) {
+      fail('SMTP_PASSWORD', 'SMTP_USER et SMTP_PASSWORD vont ensemble');
     }
     if (env.JWT_ACCESS_SECRET.includes('dev-only') || env.JWT_ACCESS_SECRET.includes('test-only')) {
       fail('JWT_ACCESS_SECRET', 'Secret de développement interdit en production');
