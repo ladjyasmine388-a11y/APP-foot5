@@ -5,7 +5,7 @@
 #
 # ⚠ Non testée sur la machine de développement (Docker Desktop y est inutilisable) : à valider au premier déploiement.
 
-FROM node:24-alpine AS base
+FROM node:25-alpine AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN npm install -g pnpm@12.10.1
 WORKDIR /app
