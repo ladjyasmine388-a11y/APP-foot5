@@ -5,12 +5,12 @@ immédiatement, le jeton ne fait pas foi. Les actions sensibles sont **auditées
 
 ## Complexes (`/admin/venues`)
 
-| Décision | Depuis | Vers | Motif | Effet |
-|---|---|---|---|---|
-| `approve` | PENDING, REJECTED | APPROVED | facultatif | visible partout ; exige au moins un terrain actif |
-| `reject` | PENDING | REJECTED | **obligatoire** | jamais visible ; le motif est communiqué aux gérants |
-| `suspend` | APPROVED | SUSPENDED | **obligatoire** | masqué des recherches, plus de nouvelle réservation |
-| `reinstate` | SUSPENDED | APPROVED | facultatif | de nouveau visible |
+| Décision    | Depuis            | Vers      | Motif           | Effet                                                |
+| ----------- | ----------------- | --------- | --------------- | ---------------------------------------------------- |
+| `approve`   | PENDING, REJECTED | APPROVED  | facultatif      | visible partout ; exige au moins un terrain actif    |
+| `reject`    | PENDING           | REJECTED  | **obligatoire** | jamais visible ; le motif est communiqué aux gérants |
+| `suspend`   | APPROVED          | SUSPENDED | **obligatoire** | masqué des recherches, plus de nouvelle réservation  |
+| `reinstate` | SUSPENDED         | APPROVED  | facultatif      | de nouveau visible                                   |
 
 - La transition est **atomique et conditionnée à l'état de départ** (`UPDATE … WHERE status IN (…)`) : deux administrateurs qui
   décident en même temps ne peuvent pas se marcher dessus (le second reçoit 409).
@@ -36,7 +36,7 @@ la connexion est refusée (`ACCOUNT_BLOCKED`). Un administrateur ne peut bloquer
 
 ## Remboursements et avis
 
-- `GET /admin/refunds` (filtre par statut). **Relancer un échec** crée une *nouvelle* demande pour le solde du paiement : le prestataire mémorise le
+- `GET /admin/refunds` (filtre par statut). **Relancer un échec** crée une _nouvelle_ demande pour le solde du paiement : le prestataire mémorise le
   résultat par identifiant de remboursement, rejouer l'ancien renverrait le même échec. L'ancienne ligne reste dans l'historique. La réservation est verrouillée
   (deux clics = une seule relance).
 - `POST /admin/bookings/:id/refund` : rembourse tout ce qui a été payé et pas déjà remboursé (litige, geste commercial), sans annuler la réservation.

@@ -83,8 +83,14 @@ export class TeamsController {
 
   @Delete('teams/:teamId')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Dissoudre mon équipe (capitaine) — refusé s’il reste une annonce ou un match à venir' })
-  async remove(@CurrentUser() user: AuthUser, @Param('teamId', uuid) teamId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  @ApiOperation({
+    summary: 'Dissoudre mon équipe (capitaine) — refusé s’il reste une annonce ou un match à venir',
+  })
+  async remove(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', uuid) teamId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.teams.delete(user, teamId, ctx);
   }
 
@@ -92,7 +98,10 @@ export class TeamsController {
 
   @Get('teams/:teamId/members')
   @ApiOperation({ summary: 'Effectif (réservé aux membres)' })
-  members(@CurrentUser() user: AuthUser, @Param('teamId', uuid) teamId: string): Promise<TeamMemberView[]> {
+  members(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', uuid) teamId: string,
+  ): Promise<TeamMemberView[]> {
     return this.teams.listMembers(user, teamId);
   }
 
@@ -111,7 +120,11 @@ export class TeamsController {
   @Post('teams/:teamId/leave')
   @HttpCode(204)
   @ApiOperation({ summary: 'Quitter l’équipe' })
-  async leave(@CurrentUser() user: AuthUser, @Param('teamId', uuid) teamId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  async leave(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', uuid) teamId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.teams.leave(user, teamId, ctx);
   }
 
@@ -144,7 +157,10 @@ export class TeamsController {
 
   @Get('teams/:teamId/invitations')
   @ApiOperation({ summary: 'Invitations en attente de mon équipe (capitaine)' })
-  teamInvitations(@CurrentUser() user: AuthUser, @Param('teamId', uuid) teamId: string): Promise<TeamInvitationAdminView[]> {
+  teamInvitations(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', uuid) teamId: string,
+  ): Promise<TeamInvitationAdminView[]> {
     return this.teams.listTeamInvitations(user, teamId);
   }
 
@@ -169,14 +185,20 @@ export class TeamsController {
   @HttpCode(200)
   @RequireVerifiedEmail()
   @ApiOperation({ summary: 'Accepter une invitation : je rejoins l’équipe' })
-  accept(@CurrentUser() user: AuthUser, @Param('invitationId', uuid) invitationId: string): Promise<TeamView> {
+  accept(
+    @CurrentUser() user: AuthUser,
+    @Param('invitationId', uuid) invitationId: string,
+  ): Promise<TeamView> {
     return this.teams.acceptInvitation(user, invitationId);
   }
 
   @Post('invitations/:invitationId/decline')
   @HttpCode(204)
   @ApiOperation({ summary: 'Refuser une invitation' })
-  async decline(@CurrentUser() user: AuthUser, @Param('invitationId', uuid) invitationId: string): Promise<void> {
+  async decline(
+    @CurrentUser() user: AuthUser,
+    @Param('invitationId', uuid) invitationId: string,
+  ): Promise<void> {
     await this.teams.declineInvitation(user, invitationId);
   }
 }

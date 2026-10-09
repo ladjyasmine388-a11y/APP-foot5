@@ -9,7 +9,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <Loading />;
-  if (status === 'anon') return <Navigate to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`} replace />;
+  if (status === 'anon')
+    return (
+      <Navigate
+        to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+        replace
+      />
+    );
   return <>{children}</>;
 }
 
@@ -18,6 +24,7 @@ export function RequireAdmin({ children }: { children: ReactNode }) {
   const { status, isAdmin } = useAuth();
   const location = useLocation();
   if (status === 'loading') return <Loading />;
-  if (status === 'anon') return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
+  if (status === 'anon')
+    return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />;
   return isAdmin ? <>{children}</> : <ForbiddenPage />;
 }

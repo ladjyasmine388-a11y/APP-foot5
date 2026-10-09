@@ -3,19 +3,37 @@
 Plateforme de réservation de terrains de **Foot Five** et de mise en relation :
 réservez un créneau, complétez votre équipe, trouvez un adversaire.
 
-> **Statut : développement en cours** — étapes 1 à 10 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images, administration / tableaux de bord / personnel, application web trilingue).
-> La documentation complète (architecture, déploiement, comptes de démo) sera finalisée en fin de projet.
-> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · Notifications, avis, images : [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) · Administration : [docs/ADMIN.md](docs/ADMIN.md) · Application web : [docs/WEB.md](docs/WEB.md) · API interactive : <http://localhost:3000/api/docs>.
+> **Statut : les 11 étapes sont réalisées** — fondations, base de données, authentification, complexes et disponibilités, réservations,
+> paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images, administration, application web
+> trilingue, tests de bout en bout et préparation au déploiement.
+>
+> **Pas encore prêt pour de vrais paiements** : l'adaptateur CIB / Edahabia n'est pas écrit, donc l'API refuse de démarrer en
+> production (voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) et [docs/ROADMAP.md](docs/ROADMAP.md)). Tout le reste fonctionne avec le
+> paiement simulé, en développement et en démonstration.
+
+## Documentation
+
+| Sujet                               | Document                                                                                                                                                                                                                                                                           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Architecture d'ensemble             | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)                                                                                                                                                                                                                                       |
+| Déploiement, sauvegardes, 1er admin | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)                                                                                                                                                                                                                                           |
+| Sécurité, liste avant production    | [docs/SECURITY.md](docs/SECURITY.md)                                                                                                                                                                                                                                               |
+| Tests                               | [docs/TESTING.md](docs/TESTING.md)                                                                                                                                                                                                                                                 |
+| Suite du projet                     | [docs/ROADMAP.md](docs/ROADMAP.md)                                                                                                                                                                                                                                                 |
+| Domaines                            | [Données](docs/DATA-MODEL.md) · [Auth](docs/AUTH.md) · [Disponibilités](docs/AVAILABILITY.md) · [Réservations](docs/BOOKINGS.md) · [Paiements](docs/PAYMENTS.md) · [Social](docs/SOCIAL.md) · [Notifications](docs/NOTIFICATIONS.md) · [Admin](docs/ADMIN.md) · [Web](docs/WEB.md) |
+
+API interactive en développement : <http://localhost:3000/api/docs>.
 
 ## Stack
 
-| Couche          | Technologie                                                                                           |
-| --------------- | ----------------------------------------------------------------------------------------------------- |
-| Web             | React 19, Vite, TypeScript, Tailwind v4, TanStack Query, React Router, i18n AR/FR/EN + RTL          |
-| API             | NestJS 12 (Fastify), TypeScript, Zod, OpenAPI                                                         |
-| Base de données | PostgreSQL 16 + Prisma (étape 2)                                                                      |
-| Monorepo        | pnpm workspaces + Turborepo                                                                           |
-| Infra locale    | Docker Compose (PostgreSQL, Mailpit, MinIO)                                                           |
+| Couche          | Technologie                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| Web             | React 19, Vite, TypeScript, Tailwind v4, TanStack Query, React Router, i18n AR/FR/EN + RTL |
+| API             | NestJS 12 (Fastify), TypeScript, Zod, OpenAPI                                              |
+| Base de données | PostgreSQL 16 + Prisma (étape 2)                                                           |
+| Monorepo        | pnpm workspaces + Turborepo                                                                |
+| Tests           | Vitest (unitaires, intégration sur vraie base) + Playwright / axe-core (bout en bout)      |
+| Infra           | Docker Compose (dev : PostgreSQL, Mailpit, MinIO ; prod : PostgreSQL, API, nginx)          |
 
 ## Structure
 
@@ -26,8 +44,9 @@ apps/
 packages/
   shared/     Enums, types et schémas Zod partagés
   config/     Configurations TypeScript / ESLint partagées
-docker/       Docker Compose de développement
-docs/         Documentation d'architecture
+e2e/          Tests de bout en bout (Playwright)
+docker/       Compose de développement, Dockerfiles et nginx de production
+docs/         Documentation
 ```
 
 ## Démarrage rapide
@@ -59,12 +78,20 @@ La base `footfive_test` et les extensions sont créées automatiquement.
 Le script crée le rôle `footfive` (non-superuser), les bases `footfive` et `footfive_test` en UTF-8 et
 les extensions. Mettez ensuite le bon port dans `.env` (`DATABASE_URL`, `TEST_DATABASE_URL`).
 
+### Comptes de démonstration
+
+Après `db:seed:demo` (développement uniquement) : `admin@footfive.dz`, `gerant1@footfive.dz` … `gerant5@footfive.dz` (gérants de
+complexes), `joueur01@footfive.dz` … `joueur20@footfive.dz` (joueurs). Le mot de passe commun est la constante `DEMO_PASSWORD`
+de [`apps/api/prisma/seed-demo.ts`](apps/api/prisma/seed-demo.ts). Ces comptes n'existent **jamais** en production : le premier
+administrateur s'y crée avec `db:create-admin` (voir [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)).
+
 ### Tests
 
 ```bash
 pnpm test                                        # tout
 pnpm --filter @footfive/api exec vitest run --project unit          # sans base de données
 pnpm --filter @footfive/api exec vitest run --project integration   # vraie base *_test
+pnpm build && pnpm e2e                           # bout en bout (navigateur réel, base *_e2e) — voir docs/TESTING.md
 ```
 
 Les tests d'intégration utilisent **une vraie base PostgreSQL** (jamais celle de développement : ils refusent
@@ -77,14 +104,17 @@ de réservation et les contraintes.
 
 ## Commandes
 
-| Commande                            | Rôle                             |
-| ----------------------------------- | -------------------------------- |
-| `pnpm build`                        | Compile tous les paquets         |
-| `pnpm lint`                         | ESLint                           |
-| `pnpm typecheck`                    | Vérification des types           |
-| `pnpm test`                         | Tests (Vitest)                   |
-| `pnpm format` / `pnpm format:check` | Prettier                         |
-| `pnpm db:up` / `pnpm db:down`       | Services Docker de développement |
+| Commande                                               | Rôle                                         |
+| ------------------------------------------------------ | -------------------------------------------- |
+| `pnpm build`                                           | Compile tous les paquets                     |
+| `pnpm lint`                                            | ESLint                                       |
+| `pnpm typecheck`                                       | Vérification des types                       |
+| `pnpm test`                                            | Tests Vitest (partagé, API, web)             |
+| `pnpm e2e`                                             | Tests de bout en bout Playwright             |
+| `pnpm format` / `pnpm format:check`                    | Prettier                                     |
+| `pnpm db:up` / `pnpm db:down`                          | Services Docker de développement             |
+| `pnpm --filter @footfive/api db:seed:demo`             | Données de démonstration (dev)               |
+| `pnpm --filter @footfive/api db:create-admin -- email` | Promeut un compte existant en administrateur |
 
 ## Principes
 

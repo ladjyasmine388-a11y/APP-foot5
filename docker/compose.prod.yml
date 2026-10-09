@@ -1,0 +1,58 @@
+# Déploiement mono-serveur : PostgreSQL + API + site web (nginx). Voir docs/DEPLOYMENT.md.
+#
+#   cp .env.production.example .env.production   # puis remplir TOUTES les valeurs
+#   docker compose -f docker/compose.prod.yml --env-file .env.production up -d --build
+#
+# ⚠ Non testé sur la machine de développement (Docker Desktop y est inutilisable) : à valider au premier déploiement.
+# ⚠ L'API REFUSE de démarrer en production avec le paiement simulé (PAYMENT_PROVIDER=fake) ou avec « live » tant que
+#   l'adaptateur CIB/Edahabia n'est pas écrit : c'est voulu (voir docs/PAYMENTS.md).
+
+name: foot-five
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: footfive
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
+      POSTGRES_DB: footfive
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U footfive -d footfive']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Jamais publié sur Internet : seul l'API y accède, par le réseau interne.
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/api.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: ../.env.production
+    environment:
+      NODE_ENV: production
+      API_PORT: 3000
+      DATABASE_URL: postgresql://footfive:${POSTGRES_PASSWORD}@postgres:5432/footfive
+      STORAGE_LOCAL_DIR: /data/uploads
+    volumes:
+      - uploads:/data/uploads
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - '${WEB_PORT:-80}:80'
+
+volumes:
+  pgdata:
+  uploads:

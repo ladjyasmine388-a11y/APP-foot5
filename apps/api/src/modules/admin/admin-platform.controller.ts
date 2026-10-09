@@ -37,7 +37,9 @@ export class AdminPlatformController {
 
   @Get('users')
   @ApiOperation({ summary: 'Rechercher des utilisateurs (email, nom, téléphone, statut, rôle)' })
-  listUsers(@Query(new ZodValidationPipe(adminListUsersQuerySchema)) query: AdminListUsersQuery): Promise<PageOf<AdminUserView>> {
+  listUsers(
+    @Query(new ZodValidationPipe(adminListUsersQuerySchema)) query: AdminListUsersQuery,
+  ): Promise<PageOf<AdminUserView>> {
     return this.users.list(query);
   }
 
@@ -63,7 +65,11 @@ export class AdminPlatformController {
   @Post('users/:userId/unblock')
   @HttpCode(200)
   @ApiOperation({ summary: 'Débloquer un compte' })
-  unblock(@CurrentUser() admin: AuthUser, @Param('userId', uuid) userId: string, @ReqCtx() ctx: RequestContext): Promise<AdminUserView> {
+  unblock(
+    @CurrentUser() admin: AuthUser,
+    @Param('userId', uuid) userId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<AdminUserView> {
     return this.users.unblock(admin, userId, ctx);
   }
 
@@ -76,7 +82,10 @@ export class AdminPlatformController {
   }
 
   @Put('commission/global')
-  @ApiOperation({ summary: 'Changer le taux global (s’applique aux nouvelles réservations ; les anciennes gardent le leur)' })
+  @ApiOperation({
+    summary:
+      'Changer le taux global (s’applique aux nouvelles réservations ; les anciennes gardent le leur)',
+  })
   @ApiZodBody(setCommissionSchema)
   setGlobal(
     @CurrentUser() admin: AuthUser,
@@ -101,14 +110,20 @@ export class AdminPlatformController {
   @Delete('commission/venues/:venueId')
   @HttpCode(204)
   @ApiOperation({ summary: 'Retirer le taux propre à un complexe (il retombe sur le taux global)' })
-  async removeVenue(@CurrentUser() admin: AuthUser, @Param('venueId', uuid) venueId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  async removeVenue(
+    @CurrentUser() admin: AuthUser,
+    @Param('venueId', uuid) venueId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.commission.removeVenue(admin, venueId, ctx);
   }
 
   // ───────────── Paramètres ─────────────
 
   @Get('settings')
-  @ApiOperation({ summary: 'Paramètres de la plateforme (durée du verrou, acompte par défaut, annulation…)' })
+  @ApiOperation({
+    summary: 'Paramètres de la plateforme (durée du verrou, acompte par défaut, annulation…)',
+  })
   settings(): ReturnType<AdminCommissionService['listSettings']> {
     return this.commission.listSettings();
   }

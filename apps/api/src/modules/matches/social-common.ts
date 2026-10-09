@@ -10,19 +10,37 @@ export type Db = PrismaService | Prisma.TransactionClient;
 /** Fuseau des filtres « date / heure » des listes publiques (la plateforme ne couvre que l'Algérie au MVP). */
 export const PLATFORM_TZ = 'Africa/Algiers';
 
-export const LEVEL_RANK: Record<PlayerLevel, number> = { BEGINNER: 0, INTERMEDIATE: 1, ADVANCED: 2 };
+export const LEVEL_RANK: Record<PlayerLevel, number> = {
+  BEGINNER: 0,
+  INTERMEDIATE: 1,
+  ADVANCED: 2,
+};
 
 /** Niveaux voisins (±1) ou activité ouverte à tous (`null`). */
 export const levelsCompatible = (a: PlayerLevel, b: PlayerLevel | null): boolean =>
   b === null || Math.abs(LEVEL_RANK[a] - LEVEL_RANK[b]) <= 1;
 
 export const conflict = (
-  code: 'CONFLICT' | 'SESSION_FULL' | 'SESSION_CLOSED' | 'SCHEDULE_CONFLICT' | 'LEVEL_INCOMPATIBLE' | 'BOOKING_NOT_ELIGIBLE' | 'TEAM_TOO_SMALL' | 'ALREADY_JOINED',
+  code:
+    | 'CONFLICT'
+    | 'SESSION_FULL'
+    | 'SESSION_CLOSED'
+    | 'SCHEDULE_CONFLICT'
+    | 'LEVEL_INCOMPATIBLE'
+    | 'BOOKING_NOT_ELIGIBLE'
+    | 'TEAM_TOO_SMALL'
+    | 'ALREADY_JOINED',
   message: string,
 ): AppException => new AppException(code, HttpStatus.CONFLICT, message);
 
 export const venueBrief = { id: true, slug: true, name: true, city: true, district: true } as const;
-export const personBrief = { id: true, firstName: true, lastName: true, avatarUrl: true, status: true } as const;
+export const personBrief = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  avatarUrl: true,
+  status: true,
+} as const;
 export const teamBrief = { id: true, name: true, logoUrl: true } as const;
 
 /** Verrouille la ligne d'une réservation : les créations concurrentes sur la même réservation passent l'une après l'autre. */
@@ -79,11 +97,18 @@ export async function requireEligibleBooking(
     throw Errors.notFound('Réservation introuvable');
   }
   if (booking.bookingType !== 'STANDARD' || booking.status !== 'CONFIRMED') {
-    throw conflict('BOOKING_NOT_ELIGIBLE', 'Seule une réservation confirmée peut servir de support');
+    throw conflict(
+      'BOOKING_NOT_ELIGIBLE',
+      'Seule une réservation confirmée peut servir de support',
+    );
   }
-  if (booking.startsAt <= now) throw conflict('BOOKING_NOT_ELIGIBLE', 'Cette réservation a déjà commencé');
+  if (booking.startsAt <= now)
+    throw conflict('BOOKING_NOT_ELIGIBLE', 'Cette réservation a déjà commencé');
   if (booking.soloSession || booking.opponentListing || booking.match) {
-    throw conflict('BOOKING_NOT_ELIGIBLE', 'Cette réservation est déjà utilisée pour une autre activité');
+    throw conflict(
+      'BOOKING_NOT_ELIGIBLE',
+      'Cette réservation est déjà utilisée pour une autre activité',
+    );
   }
   return {
     id: booking.id,

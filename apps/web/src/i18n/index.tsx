@@ -1,7 +1,25 @@
 import { DEFAULT_LOCALE, type Locale } from '@footfive/shared';
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { ApiError } from '../lib/api';
-import { detectLocale, directionOf, formatDate, formatDateTime, formatMoney, formatNumber, formatTime, interpolate, isLocale } from './format';
+import {
+  detectLocale,
+  directionOf,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatTime,
+  interpolate,
+  isLocale,
+} from './format';
 import { errorMessages } from './messages/errors';
 import { type MessageKey, messages } from './messages/index';
 
@@ -34,7 +52,9 @@ function initialLocale(): Locale {
   } catch {
     /* stockage indisponible (navigation privée) */
   }
-  return detectLocale(typeof navigator === 'undefined' ? [] : navigator.languages ?? [navigator.language]);
+  return detectLocale(
+    typeof navigator === 'undefined' ? [] : (navigator.languages ?? [navigator.language]),
+  );
 }
 
 export function I18nProvider({ children, initial }: { children: ReactNode; initial?: Locale }) {
@@ -60,7 +80,8 @@ export function I18nProvider({ children, initial }: { children: ReactNode; initi
       locale,
       dir: directionOf(locale),
       setLocale,
-      t: (key, params) => interpolate(messages[key][locale] ?? messages[key][DEFAULT_LOCALE], params),
+      t: (key, params) =>
+        interpolate(messages[key][locale] ?? messages[key][DEFAULT_LOCALE], params),
       tMaybe: (key) => (Object.hasOwn(messages, key) ? messages[key as MessageKey][locale] : null),
       tError: (error) => {
         const code = error instanceof ApiError ? error.code : 'UNKNOWN';

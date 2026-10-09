@@ -42,11 +42,17 @@ export abstract class MatchingStrategy {
   abstract score(player: PlayerProfile, session: SessionCandidate, now: Date): number;
 
   /** Sessions compatibles, de la plus pertinente à la moins pertinente. */
-  rank<S extends SessionCandidate>(player: PlayerProfile, sessions: readonly S[], now: Date): ScoredSession<S>[] {
+  rank<S extends SessionCandidate>(
+    player: PlayerProfile,
+    sessions: readonly S[],
+    now: Date,
+  ): ScoredSession<S>[] {
     return sessions
       .filter((s) => this.isCompatible(player, s))
       .map((session) => ({ session, score: this.score(player, session, now) }))
-      .sort((a, b) => b.score - a.score || a.session.startsAt.getTime() - b.session.startsAt.getTime());
+      .sort(
+        (a, b) => b.score - a.score || a.session.startsAt.getTime() - b.session.startsAt.getTime(),
+      );
   }
 }
 

@@ -11,7 +11,9 @@ export function useBookableBookings() {
   return useQuery({
     queryKey: ['bookings', 'bookable'],
     queryFn: async (): Promise<BookingView[]> => {
-      const res = await api<BookingListResponse>('/bookings', { query: { when: 'upcoming', status: 'CONFIRMED', limit: 50 } });
+      const res = await api<BookingListResponse>('/bookings', {
+        query: { when: 'upcoming', status: 'CONFIRMED', limit: 50 },
+      });
       return res.items;
     },
   });
@@ -21,7 +23,8 @@ export function useMyTeams() {
   return useQuery({ queryKey: ['teams', 'mine'], queryFn: () => api<TeamView[]>('/me/teams') });
 }
 
-export const captainOf = (teams: TeamView[] | undefined): TeamView[] => (teams ?? []).filter((team) => team.myRole === 'CAPTAIN');
+export const captainOf = (teams: TeamView[] | undefined): TeamView[] =>
+  (teams ?? []).filter((team) => team.myRole === 'CAPTAIN');
 
 /**
  * Horloge de l'interface : l'heure courante, rafraîchie à intervalle régulier. Appeler `Date.now()` directement dans le rendu

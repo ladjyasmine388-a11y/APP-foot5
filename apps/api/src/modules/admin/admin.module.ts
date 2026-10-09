@@ -13,7 +13,18 @@ import { StatsService } from './stats.service.js';
 
 @Module({
   imports: [BookingsModule, NotificationsModule],
-  controllers: [AdminVenuesController, AdminPlatformController, AdminOpsController, StatsController],
-  providers: [AdminVenuesService, AdminUsersService, AdminCommissionService, AdminModerationService, StatsService],
+  controllers: [
+    AdminVenuesController,
+    AdminPlatformController,
+    AdminOpsController,
+    StatsController,
+  ],
+  providers: [
+    AdminVenuesService,
+    AdminUsersService,
+    AdminCommissionService,
+    AdminModerationService,
+    StatsService,
+  ],
 })
 export class AdminModule {}

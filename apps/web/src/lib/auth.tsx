@@ -1,6 +1,14 @@
 import type { AuthResponse, LoginInput, PublicUser, RegisterInput } from '@footfive/shared';
 import { useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { api, refreshSession, setAccessToken, setSessionLostHandler } from './api';
 
 type Status = 'loading' | 'anon' | 'auth';
@@ -58,8 +66,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       status,
       user,
       isAdmin: user?.platformRole === 'ADMIN',
-      login: async (input) => accept(await api<AuthResponse>('/auth/login', { method: 'POST', body: input, auth: false })),
-      register: async (input) => accept(await api<AuthResponse>('/auth/register', { method: 'POST', body: input, auth: false })),
+      login: async (input) =>
+        accept(
+          await api<AuthResponse>('/auth/login', { method: 'POST', body: input, auth: false }),
+        ),
+      register: async (input) =>
+        accept(
+          await api<AuthResponse>('/auth/register', { method: 'POST', body: input, auth: false }),
+        ),
       logout: async () => {
         try {
           await api('/auth/logout', { method: 'POST' });

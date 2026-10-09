@@ -15,14 +15,33 @@ describe('formulaires', () => {
   });
 
   it('refuse un compte sans consentement aux conditions ni mot de passe acceptable', () => {
-    const base = { firstName: 'Yacine', lastName: 'Benali', email: 'y@example.com', phone: '0550123456', level: 'BEGINNER', preferredPosition: 'ANY', locale: 'fr' };
-    expect(parseForm(registerSchema, { ...base, password: 'un-bon-mot-de-passe', acceptTerms: false }).errors).toHaveProperty('acceptTerms');
-    expect(parseForm(registerSchema, { ...base, password: 'court', acceptTerms: true }).errors).toHaveProperty('password');
-    expect(parseForm(registerSchema, { ...base, password: 'un-bon-mot-de-passe', acceptTerms: true }).errors).toBeNull();
+    const base = {
+      firstName: 'Yacine',
+      lastName: 'Benali',
+      email: 'y@example.com',
+      phone: '0550123456',
+      level: 'BEGINNER',
+      preferredPosition: 'ANY',
+      locale: 'fr',
+    };
+    expect(
+      parseForm(registerSchema, { ...base, password: 'un-bon-mot-de-passe', acceptTerms: false })
+        .errors,
+    ).toHaveProperty('acceptTerms');
+    expect(
+      parseForm(registerSchema, { ...base, password: 'court', acceptTerms: true }).errors,
+    ).toHaveProperty('password');
+    expect(
+      parseForm(registerSchema, { ...base, password: 'un-bon-mot-de-passe', acceptTerms: true })
+        .errors,
+    ).toBeNull();
   });
 
   it('lit les champs refusés par le serveur', () => {
-    const error = new ApiError(400, 'VALIDATION_ERROR', 'x', [{ path: 'spots', message: 'Maximum 9', code: 'too_big' }, { path: '', message: 'ignoré' }]);
+    const error = new ApiError(400, 'VALIDATION_ERROR', 'x', [
+      { path: 'spots', message: 'Maximum 9', code: 'too_big' },
+      { path: '', message: 'ignoré' },
+    ]);
     expect(serverFieldErrors(error)).toEqual({ spots: 'too_big' });
     expect(serverFieldErrors(new ApiError(500, 'INTERNAL_ERROR', 'x'))).toEqual({});
     expect(serverFieldErrors(new Error('autre'))).toEqual({});
@@ -37,7 +56,16 @@ describe('formulaires', () => {
 describe('redirection après connexion', () => {
   it('n’accepte qu’un chemin interne : jamais une adresse externe (pas de redirection ouverte)', () => {
     expect(safeNext('/bookings/123?x=1')).toBe('/bookings/123?x=1');
-    for (const evil of ['https://evil.example', '//evil.example', 'javascript:alert(1)', '\\\\evil', '/\\evil', '', null, undefined]) {
+    for (const evil of [
+      'https://evil.example',
+      '//evil.example',
+      'javascript:alert(1)',
+      '\\\\evil',
+      '/\\evil',
+      '',
+      null,
+      undefined,
+    ]) {
       expect(safeNext(evil), String(evil)).toBe('/');
     }
   });

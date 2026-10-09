@@ -41,31 +41,49 @@ export class AdminOpsController {
   ) {}
 
   @Get('stats')
-  @ApiOperation({ summary: 'Statistiques de la plateforme sur une période (réservations, chiffre d’affaires, commission, remboursements)' })
-  adminStats(@Query(new ZodValidationPipe(statsQuerySchema)) query: StatsQuery): Promise<AdminStats> {
+  @ApiOperation({
+    summary:
+      'Statistiques de la plateforme sur une période (réservations, chiffre d’affaires, commission, remboursements)',
+  })
+  adminStats(
+    @Query(new ZodValidationPipe(statsQuerySchema)) query: StatsQuery,
+  ): Promise<AdminStats> {
     return this.stats.admin(query);
   }
 
   @Get('audit-logs')
   @ApiOperation({ summary: 'Journal d’audit (lecture seule, immuable)' })
-  audit(@Query(new ZodValidationPipe(auditQuerySchema)) query: AuditQuery): Promise<PageOf<AuditLogView>> {
+  audit(
+    @Query(new ZodValidationPipe(auditQuerySchema)) query: AuditQuery,
+  ): Promise<PageOf<AuditLogView>> {
     return this.moderation.auditLogs(query);
   }
 
   @Get('refunds')
   @ApiOperation({ summary: 'Remboursements, filtrables par statut' })
-  refunds(@Query(new ZodValidationPipe(adminListRefundsQuerySchema)) query: AdminListRefundsQuery): Promise<PageOf<AdminRefundView>> {
+  refunds(
+    @Query(new ZodValidationPipe(adminListRefundsQuerySchema)) query: AdminListRefundsQuery,
+  ): Promise<PageOf<AdminRefundView>> {
     return this.moderation.listRefunds(query);
   }
 
   @Post('refunds/:refundId/retry')
-  @ApiOperation({ summary: 'Relancer un remboursement en échec (crée une nouvelle demande ; l’ancienne reste dans l’historique)' })
-  retry(@CurrentUser() admin: AuthUser, @Param('refundId', uuid) refundId: string, @ReqCtx() ctx: RequestContext): Promise<{ refundId: string }> {
+  @ApiOperation({
+    summary:
+      'Relancer un remboursement en échec (crée une nouvelle demande ; l’ancienne reste dans l’historique)',
+  })
+  retry(
+    @CurrentUser() admin: AuthUser,
+    @Param('refundId', uuid) refundId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<{ refundId: string }> {
     return this.moderation.retryRefund(admin, refundId, ctx);
   }
 
   @Post('bookings/:bookingId/refund')
-  @ApiOperation({ summary: 'Rembourser tout ce qui a été payé pour une réservation (litige, geste commercial)' })
+  @ApiOperation({
+    summary: 'Rembourser tout ce qui a été payé pour une réservation (litige, geste commercial)',
+  })
   @ApiZodBody(adminRefundBookingSchema)
   refundBooking(
     @CurrentUser() admin: AuthUser,
@@ -78,7 +96,9 @@ export class AdminOpsController {
 
   @Get('reviews')
   @ApiOperation({ summary: 'Avis (masqués ou non, par complexe)' })
-  reviews(@Query(new ZodValidationPipe(adminListReviewsQuerySchema)) query: AdminListReviewsQuery): Promise<PageOf<AdminReviewView>> {
+  reviews(
+    @Query(new ZodValidationPipe(adminListReviewsQuerySchema)) query: AdminListReviewsQuery,
+  ): Promise<PageOf<AdminReviewView>> {
     return this.moderation.listReviews(query);
   }
 

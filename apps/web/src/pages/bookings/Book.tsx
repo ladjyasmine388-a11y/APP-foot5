@@ -1,4 +1,9 @@
-import { ONLINE_PAYMENT_MODES, type BookingQuote, type BookingView, type PaymentView } from '@footfive/shared';
+import {
+  ONLINE_PAYMENT_MODES,
+  type BookingQuote,
+  type BookingView,
+  type PaymentView,
+} from '@footfive/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
@@ -23,7 +28,11 @@ export function BookPage() {
 
   const quote = useQuery({
     queryKey: ['quote', fieldId, startsAt, mode],
-    queryFn: () => api<BookingQuote>('/bookings/quote', { method: 'POST', body: { fieldId, startsAt, paymentMode: mode } }),
+    queryFn: () =>
+      api<BookingQuote>('/bookings/quote', {
+        method: 'POST',
+        body: { fieldId, startsAt, paymentMode: mode },
+      }),
     enabled: Boolean(fieldId && startsAt) && user?.emailVerified === true,
     retry: false,
   });
@@ -32,9 +41,17 @@ export function BookPage() {
     setBusy(true);
     setFailure(null);
     try {
-      const booking = await api<BookingView>('/bookings', { method: 'POST', body: { fieldId, startsAt, paymentMode: mode }, idempotencyKey: keys.current.booking });
+      const booking = await api<BookingView>('/bookings', {
+        method: 'POST',
+        body: { fieldId, startsAt, paymentMode: mode },
+        idempotencyKey: keys.current.booking,
+      });
       try {
-        const payment = await api<PaymentView>(`/bookings/${booking.id}/pay`, { method: 'POST', body: {}, idempotencyKey: keys.current.pay });
+        const payment = await api<PaymentView>(`/bookings/${booking.id}/pay`, {
+          method: 'POST',
+          body: {},
+          idempotencyKey: keys.current.pay,
+        });
         if (payment.checkoutUrl) {
           window.location.assign(payment.checkoutUrl); // page de paiement du prestataire
           return;
@@ -45,24 +62,34 @@ export function BookPage() {
       navigate(`/bookings/${booking.id}`, { replace: true });
     } catch (error) {
       setFailure(error);
-      if (!(error instanceof ApiError && error.code === 'NETWORK')) keys.current = { booking: newIdempotencyKey(), pay: newIdempotencyKey() };
+      if (!(error instanceof ApiError && error.code === 'NETWORK'))
+        keys.current = { booking: newIdempotencyKey(), pay: newIdempotencyKey() };
     } finally {
       setBusy(false);
     }
   };
 
-  if (!startsAt) return <Alert tone="error">{tError(new ApiError(400, 'VALIDATION_ERROR', ''))}</Alert>;
+  if (!startsAt)
+    return <Alert tone="error">{tError(new ApiError(400, 'VALIDATION_ERROR', ''))}</Alert>;
   const q = quote.data;
 
   return (
     <div className="mx-auto max-w-xl">
       <PageHeader title={t('booking.title')} />
-      {user && !user.emailVerified && <Alert tone="warning" className="mb-4">{t('booking.verifyToBook')}</Alert>}
+      {user && !user.emailVerified && (
+        <Alert tone="warning" className="mb-4">
+          {t('booking.verifyToBook')}
+        </Alert>
+      )}
       {quote.isPending && user?.emailVerified && <Loading />}
       {quote.isError && (
         <div className="space-y-3">
           <ErrorState error={quote.error} />
-          {venueSlug && <Link className="font-semibold text-brand-700 underline" to={`/venues/${venueSlug}`}>{t('common.back')}</Link>}
+          {venueSlug && (
+            <Link className="font-semibold text-brand-700 underline" to={`/venues/${venueSlug}`}>
+              {t('common.back')}
+            </Link>
+          )}
         </div>
       )}
       {q && (
@@ -81,8 +108,17 @@ export function BookPage() {
             <legend className="mb-2 text-sm font-medium">{t('booking.mode')}</legend>
             <div className="space-y-2">
               {ONLINE_PAYMENT_MODES.map((m) => (
-                <label key={m} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm ${mode === m ? 'border-brand-600 bg-brand-50' : 'border-line'}`}>
-                  <input type="radio" name="mode" className="size-4 accent-brand-700" checked={mode === m} onChange={() => setMode(m)} />
+                <label
+                  key={m}
+                  className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 text-sm ${mode === m ? 'border-brand-600 bg-brand-50' : 'border-line'}`}
+                >
+                  <input
+                    type="radio"
+                    name="mode"
+                    className="size-4 accent-brand-700"
+                    checked={mode === m}
+                    onChange={() => setMode(m)}
+                  />
                   {t(`booking.mode.${m}` as MessageKey)}
                 </label>
               ))}
@@ -90,12 +126,22 @@ export function BookPage() {
           </fieldset>
 
           <div className="mt-4 rounded-xl bg-brand-50 p-3 text-sm">
-            <p className="flex justify-between font-semibold text-brand-900"><span>{t('booking.dueOnline')}</span><span className="num">{money(q.dueOnlineMinor)}</span></p>
-            <p className="mt-1 flex justify-between text-muted"><span>{t('booking.dueOnSite')}</span><span className="num">{money(q.dueOnSiteMinor)}</span></p>
+            <p className="flex justify-between font-semibold text-brand-900">
+              <span>{t('booking.dueOnline')}</span>
+              <span className="num">{money(q.dueOnlineMinor)}</span>
+            </p>
+            <p className="mt-1 flex justify-between text-muted">
+              <span>{t('booking.dueOnSite')}</span>
+              <span className="num">{money(q.dueOnSiteMinor)}</span>
+            </p>
           </div>
           <p className="mt-3 text-xs text-muted">{t('booking.holdInfo', { n: q.holdMinutes })}</p>
 
-          {failure !== null && <Alert tone="error" className="mt-4">{tError(failure)}</Alert>}
+          {failure !== null && (
+            <Alert tone="error" className="mt-4">
+              {tError(failure)}
+            </Alert>
+          )}
           <Button className="mt-4 w-full" loading={busy} onClick={() => void confirm()}>
             {t('booking.payAndConfirm', { amount: money(q.dueOnlineMinor) })}
           </Button>
@@ -107,7 +153,9 @@ export function BookPage() {
 
 function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
-    <div className={`flex justify-between gap-4 ${strong ? 'border-t border-line pt-2 font-semibold' : ''}`}>
+    <div
+      className={`flex justify-between gap-4 ${strong ? 'border-t border-line pt-2 font-semibold' : ''}`}
+    >
       <dt className="text-muted">{label}</dt>
       <dd className="num text-end">{value}</dd>
     </div>

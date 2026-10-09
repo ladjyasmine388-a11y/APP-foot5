@@ -34,14 +34,32 @@ const MAX_PENDING_REQUESTS = 20;
 
 const listingInclude = {
   venue: { select: venueBrief },
-  booking: { select: { endsAt: true, field: { select: { id: true, name: true, capacity: true } } } },
-  team: { select: { id: true, name: true, logoUrl: true, level: true, _count: { select: { members: { where: { leftAt: null } } } } } },
+  booking: {
+    select: { endsAt: true, field: { select: { id: true, name: true, capacity: true } } },
+  },
+  team: {
+    select: {
+      id: true,
+      name: true,
+      logoUrl: true,
+      level: true,
+      _count: { select: { members: { where: { leftAt: null } } } },
+    },
+  },
   match: { select: { id: true } },
 } satisfies Prisma.OpponentListingInclude;
 type ListingRow = Prisma.OpponentListingGetPayload<{ include: typeof listingInclude }>;
 
 const requestInclude = {
-  requestingTeam: { select: { id: true, name: true, logoUrl: true, level: true, _count: { select: { members: { where: { leftAt: null } } } } } },
+  requestingTeam: {
+    select: {
+      id: true,
+      name: true,
+      logoUrl: true,
+      level: true,
+      _count: { select: { members: { where: { leftAt: null } } } },
+    },
+  },
 } satisfies Prisma.MatchRequestInclude;
 type RequestRow = Prisma.MatchRequestGetPayload<{ include: typeof requestInclude }>;
 
@@ -67,7 +85,12 @@ export class OpponentsService {
   // ───────────────────────── Annonces ─────────────────────────
 
   /** « Nous cherchons un adversaire » : le capitaine annonce une de SES réservations confirmées. */
-  async create(user: AuthUser, input: CreateOpponentListingInput, ctx: RequestContext, now: Date = new Date()): Promise<OpponentListingView> {
+  async create(
+    user: AuthUser,
+    input: CreateOpponentListingInput,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<OpponentListingView> {
     await this.teams.requireCaptain(user.id, input.teamId);
 
     const listingId = await this.prisma.$transaction(async (tx) => {
@@ -79,14 +102,28 @@ export class OpponentsService {
         select: { level: true, _count: { select: { members: { where: { leftAt: null } } } } },
       });
       // Format par défaut : le plus grand que le terrain ET l'effectif permettent (5 à 8 par équipe).
-      const perSide = input.playersPerSide ?? Math.min(8, Math.floor(booking.fieldCapacity / 2), Math.max(5, team._count.members));
+      const perSide =
+        input.playersPerSide ??
+        Math.min(8, Math.floor(booking.fieldCapacity / 2), Math.max(5, team._count.members));
       if (perSide * 2 > booking.fieldCapacity) {
-        throw new AppException('VALIDATION_ERROR', HttpStatus.BAD_REQUEST, `Ce terrain accueille ${booking.fieldCapacity} joueurs au maximum`, [
-          { path: 'playersPerSide', message: `Maximum ${Math.floor(booking.fieldCapacity / 2)}`, code: 'too_big' },
-        ]);
+        throw new AppException(
+          'VALIDATION_ERROR',
+          HttpStatus.BAD_REQUEST,
+          `Ce terrain accueille ${booking.fieldCapacity} joueurs au maximum`,
+          [
+            {
+              path: 'playersPerSide',
+              message: `Maximum ${Math.floor(booking.fieldCapacity / 2)}`,
+              code: 'too_big',
+            },
+          ],
+        );
       }
       if (team._count.members < perSide) {
-        throw conflict('TEAM_TOO_SMALL', `Il faut au moins ${perSide} joueurs dans l’équipe pour ce format`);
+        throw conflict(
+          'TEAM_TOO_SMALL',
+          `Il faut au moins ${perSide} joueurs dans l’équipe pour ce format`,
+        );
       }
 
       const listing = await tx.opponentListing.create({
@@ -104,7 +141,14 @@ export class OpponentsService {
         select: { id: true },
       });
       await this.audit.record(
-        { actorId: user.id, actorRole: 'USER', action: 'opponent.listing_create', entityType: 'OpponentListing', entityId: listing.id, after: { teamId: input.teamId, bookingId: booking.id, playersPerSide: perSide } },
+        {
+          actorId: user.id,
+          actorRole: 'USER',
+          action: 'opponent.listing_create',
+          entityType: 'OpponentListing',
+          entityId: listing.id,
+          after: { teamId: input.teamId, bookingId: booking.id, playersPerSide: perSide },
+        },
         ctx,
         tx,
       );
@@ -113,7 +157,11 @@ export class OpponentsService {
     return this.getForViewer(listingId, user);
   }
 
-  async list(query: ListOpponentListingsQuery, viewer: AuthUser | null, now: Date = new Date()): Promise<PageOf<OpponentListingView>> {
+  async list(
+    query: ListOpponentListingsQuery,
+    viewer: AuthUser | null,
+    now: Date = new Date(),
+  ): Promise<PageOf<OpponentListingView>> {
     const offset = decodeOffset(query.cursor);
     const startsAt: Prisma.DateTimeFilter = { gt: now };
     if (query.date) {
@@ -140,14 +188,27 @@ export class OpponentsService {
     });
     const page = rows.slice(0, query.limit);
     const views = await this.toViews(page, viewer);
-    return { items: views, nextCursor: rows.length > query.limit ? encodeOffset(offset + query.limit) : null };
+    return {
+      items: views,
+      nextCursor: rows.length > query.limit ? encodeOffset(offset + query.limit) : null,
+    };
   }
 
   /** Une annonce ouverte est publique ; sinon réservée aux équipes concernées et au personnel du complexe. */
-  async getForViewer(id: string, viewer: AuthUser | null, now: Date = new Date()): Promise<OpponentListingView> {
-    const row = await this.prisma.opponentListing.findUnique({ where: { id }, include: listingInclude });
+  async getForViewer(
+    id: string,
+    viewer: AuthUser | null,
+    now: Date = new Date(),
+  ): Promise<OpponentListingView> {
+    const row = await this.prisma.opponentListing.findUnique({
+      where: { id },
+      include: listingInclude,
+    });
     if (!row) throw notFound();
-    const open = row.status === 'OPEN' && row.startsAt > now && (await this.prisma.venue.count({ where: { id: row.venueId, status: 'APPROVED' } })) > 0;
+    const open =
+      row.status === 'OPEN' &&
+      row.startsAt > now &&
+      (await this.prisma.venue.count({ where: { id: row.venueId, status: 'APPROVED' } })) > 0;
     if (!open && !(await this.isConcerned(row, viewer))) throw notFound();
     return (await this.toViews([row], viewer))[0] as OpponentListingView;
   }
@@ -163,18 +224,41 @@ export class OpponentsService {
   }
 
   /** Retire une annonce encore ouverte (les demandes en attente sont rejetées). Annonce déjà acceptée : annuler le match. */
-  async cancel(user: AuthUser, id: string, ctx: RequestContext, now: Date = new Date()): Promise<void> {
-    const listing = await this.prisma.opponentListing.findUnique({ where: { id }, select: { teamId: true } });
+  async cancel(
+    user: AuthUser,
+    id: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const listing = await this.prisma.opponentListing.findUnique({
+      where: { id },
+      select: { teamId: true },
+    });
     if (!listing) throw notFound();
     await this.teams.requireCaptain(user.id, listing.teamId);
 
     const outcome = await this.prisma.$transaction(async (tx) => {
       await lockListing(tx, id);
-      const current = await tx.opponentListing.findUniqueOrThrow({ where: { id }, select: { status: true } });
-      if (current.status === 'ACCEPTED') throw conflict('CONFLICT', 'Un adversaire est déjà confirmé : annulez le match');
+      const current = await tx.opponentListing.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
+      });
+      if (current.status === 'ACCEPTED')
+        throw conflict('CONFLICT', 'Un adversaire est déjà confirmé : annulez le match');
       const result = await cancelListingTx(tx, id, now);
-      if (result.rejected.length === 0 && current.status !== 'OPEN') throw conflict('SESSION_CLOSED', 'Cette annonce est déjà fermée');
-      await this.audit.record({ actorId: user.id, actorRole: 'USER', action: 'opponent.listing_cancel', entityType: 'OpponentListing', entityId: id }, ctx, tx);
+      if (result.rejected.length === 0 && current.status !== 'OPEN')
+        throw conflict('SESSION_CLOSED', 'Cette annonce est déjà fermée');
+      await this.audit.record(
+        {
+          actorId: user.id,
+          actorRole: 'USER',
+          action: 'opponent.listing_cancel',
+          entityType: 'OpponentListing',
+          entityId: id,
+        },
+        ctx,
+        tx,
+      );
       return result;
     });
     await emitOutcome(this.events, outcome);
@@ -182,63 +266,110 @@ export class OpponentsService {
 
   // ───────────────────────── Demandes ─────────────────────────
 
-  async request(user: AuthUser, listingId: string, input: CreateMatchRequestInput, now: Date = new Date()): Promise<MatchRequestView> {
+  async request(
+    user: AuthUser,
+    listingId: string,
+    input: CreateMatchRequestInput,
+    now: Date = new Date(),
+  ): Promise<MatchRequestView> {
     await this.teams.requireCaptain(user.id, input.teamId);
 
     const requestId = await this.prisma.$transaction(async (tx) => {
       const listing = await tx.opponentListing.findUnique({
         where: { id: listingId },
-        include: { booking: { select: { status: true, endsAt: true } }, team: { select: { deletedAt: true } }, venue: { select: { status: true } } },
+        include: {
+          booking: { select: { status: true, endsAt: true } },
+          team: { select: { deletedAt: true } },
+          venue: { select: { status: true } },
+        },
       });
-      if (!listing || listing.team.deletedAt || listing.venue.status !== 'APPROVED') throw notFound();
-      if (listing.teamId === input.teamId) throw conflict('CONFLICT', 'Une équipe ne peut pas s’affronter elle-même');
-      if (listing.status !== 'OPEN' || listing.startsAt <= now || listing.booking.status !== 'CONFIRMED') {
+      if (!listing || listing.team.deletedAt || listing.venue.status !== 'APPROVED')
+        throw notFound();
+      if (listing.teamId === input.teamId)
+        throw conflict('CONFLICT', 'Une équipe ne peut pas s’affronter elle-même');
+      if (
+        listing.status !== 'OPEN' ||
+        listing.startsAt <= now ||
+        listing.booking.status !== 'CONFIRMED'
+      ) {
         throw conflict('SESSION_CLOSED', 'Cette annonce n’est plus ouverte');
       }
       // Un capitaine ne peut pas jouer des deux côtés.
-      const bothSides = await tx.teamMember.count({ where: { teamId: listing.teamId, userId: user.id, role: 'CAPTAIN', leftAt: null } });
-      if (bothSides > 0) throw conflict('CONFLICT', 'Vous dirigez l’équipe qui a publié cette annonce');
+      const bothSides = await tx.teamMember.count({
+        where: { teamId: listing.teamId, userId: user.id, role: 'CAPTAIN', leftAt: null },
+      });
+      if (bothSides > 0)
+        throw conflict('CONFLICT', 'Vous dirigez l’équipe qui a publié cette annonce');
 
       const team = await tx.team.findUniqueOrThrow({
         where: { id: input.teamId },
         select: { level: true, _count: { select: { members: { where: { leftAt: null } } } } },
       });
       if (team._count.members < listing.playersPerSide) {
-        throw conflict('TEAM_TOO_SMALL', `Il faut au moins ${listing.playersPerSide} joueurs dans l’équipe pour ce format`);
+        throw conflict(
+          'TEAM_TOO_SMALL',
+          `Il faut au moins ${listing.playersPerSide} joueurs dans l’équipe pour ce format`,
+        );
       }
-      if (!levelsCompatible(team.level, listing.level)) throw conflict('LEVEL_INCOMPATIBLE', 'Le niveau de votre équipe ne correspond pas à cette annonce');
+      if (!levelsCompatible(team.level, listing.level))
+        throw conflict(
+          'LEVEL_INCOMPATIBLE',
+          'Le niveau de votre équipe ne correspond pas à cette annonce',
+        );
       await this.requireTeamFree(tx, input.teamId, listing.startsAt, listing.booking.endsAt);
 
       const pending = await tx.matchRequest.count({ where: { listingId, status: 'REQUESTED' } });
-      if (pending >= MAX_PENDING_REQUESTS) throw conflict('CONFLICT', 'Trop de demandes en attente pour cette annonce');
+      if (pending >= MAX_PENDING_REQUESTS)
+        throw conflict('CONFLICT', 'Trop de demandes en attente pour cette annonce');
 
       try {
         const created = await tx.matchRequest.create({
-          data: { listingId, requestingTeamId: input.teamId, requestedById: user.id, message: input.message ?? null },
+          data: {
+            listingId,
+            requestingTeamId: input.teamId,
+            requestedById: user.id,
+            message: input.message ?? null,
+          },
           select: { id: true },
         });
         return created.id;
       } catch (error) {
-        if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('CONFLICT', 'Votre équipe a déjà une demande en cours pour cette annonce');
+        if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+          throw conflict('CONFLICT', 'Votre équipe a déjà une demande en cours pour cette annonce');
         throw error;
       }
     });
     await this.events.emit('opponent.request_created', { requestId, listingId });
-    const row = await this.prisma.matchRequest.findUniqueOrThrow({ where: { id: requestId }, include: requestInclude });
+    const row = await this.prisma.matchRequest.findUniqueOrThrow({
+      where: { id: requestId },
+      include: requestInclude,
+    });
     return this.toRequestView(row);
   }
 
   async listRequests(user: AuthUser, listingId: string): Promise<MatchRequestView[]> {
-    const listing = await this.prisma.opponentListing.findUnique({ where: { id: listingId }, select: { teamId: true } });
+    const listing = await this.prisma.opponentListing.findUnique({
+      where: { id: listingId },
+      select: { teamId: true },
+    });
     if (!listing) throw notFound();
     await this.teams.requireCaptain(user.id, listing.teamId);
-    const rows = await this.prisma.matchRequest.findMany({ where: { listingId }, include: requestInclude, orderBy: { createdAt: 'desc' } });
+    const rows = await this.prisma.matchRequest.findMany({
+      where: { listingId },
+      include: requestInclude,
+      orderBy: { createdAt: 'desc' },
+    });
     return rows.map((r) => this.toRequestView(r));
   }
 
   async listMyRequests(user: AuthUser): Promise<MatchRequestView[]> {
     const rows = await this.prisma.matchRequest.findMany({
-      where: { requestingTeam: { deletedAt: null, members: { some: { userId: user.id, role: 'CAPTAIN', leftAt: null } } } },
+      where: {
+        requestingTeam: {
+          deletedAt: null,
+          members: { some: { userId: user.id, role: 'CAPTAIN', leftAt: null } },
+        },
+      },
       include: requestInclude,
       orderBy: { createdAt: 'desc' },
       take: 50,
@@ -251,8 +382,17 @@ export class OpponentsService {
    * des deux équipes. L'annonce est verrouillée (`FOR UPDATE`) : deux acceptations simultanées ne peuvent pas
    * produire deux adversaires (un index partiel en base le garantit aussi).
    */
-  async accept(user: AuthUser, listingId: string, requestId: string, ctx: RequestContext, now: Date = new Date()): Promise<MatchView> {
-    const head = await this.prisma.opponentListing.findUnique({ where: { id: listingId }, select: { teamId: true } });
+  async accept(
+    user: AuthUser,
+    listingId: string,
+    requestId: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<MatchView> {
+    const head = await this.prisma.opponentListing.findUnique({
+      where: { id: listingId },
+      select: { teamId: true },
+    });
     if (!head) throw notFound();
     await this.teams.requireCaptain(user.id, head.teamId);
 
@@ -265,10 +405,16 @@ export class OpponentsService {
           where: { id: listingId },
           include: { booking: { select: { status: true, endsAt: true } } },
         });
-        if (listing.status !== 'OPEN' || listing.startsAt <= now || listing.booking.status !== 'CONFIRMED') {
+        if (
+          listing.status !== 'OPEN' ||
+          listing.startsAt <= now ||
+          listing.booking.status !== 'CONFIRMED'
+        ) {
           throw conflict('SESSION_CLOSED', 'Cette annonce n’est plus ouverte');
         }
-        const request = await tx.matchRequest.findFirst({ where: { id: requestId, listingId, status: 'REQUESTED' } });
+        const request = await tx.matchRequest.findFirst({
+          where: { id: requestId, listingId, status: 'REQUESTED' },
+        });
         if (!request) throw Errors.notFound('Demande introuvable ou déjà traitée');
 
         const opponent = await tx.team.findFirst({
@@ -276,10 +422,19 @@ export class OpponentsService {
           select: { _count: { select: { members: { where: { leftAt: null } } } } },
         });
         if (!opponent) throw Errors.notFound('Cette équipe n’existe plus');
-        if (opponent._count.members < listing.playersPerSide) throw conflict('TEAM_TOO_SMALL', 'L’équipe adverse n’a plus assez de joueurs');
-        await this.requireTeamFree(tx, request.requestingTeamId, listing.startsAt, listing.booking.endsAt);
+        if (opponent._count.members < listing.playersPerSide)
+          throw conflict('TEAM_TOO_SMALL', 'L’équipe adverse n’a plus assez de joueurs');
+        await this.requireTeamFree(
+          tx,
+          request.requestingTeamId,
+          listing.startsAt,
+          listing.booking.endsAt,
+        );
 
-        await tx.matchRequest.update({ where: { id: requestId }, data: { status: 'ACCEPTED', respondedAt: now } });
+        await tx.matchRequest.update({
+          where: { id: requestId },
+          data: { status: 'ACCEPTED', respondedAt: now },
+        });
         const others = await tx.matchRequest.updateManyAndReturn({
           where: { listingId, status: 'REQUESTED', id: { not: requestId } },
           data: { status: 'REJECTED', respondedAt: now },
@@ -289,13 +444,21 @@ export class OpponentsService {
         await tx.opponentListing.update({ where: { id: listingId }, data: { status: 'ACCEPTED' } });
 
         const [membersA, membersB] = await Promise.all([
-          tx.teamMember.findMany({ where: { teamId: listing.teamId, leftAt: null }, select: { userId: true } }),
-          tx.teamMember.findMany({ where: { teamId: request.requestingTeamId, leftAt: null }, select: { userId: true } }),
+          tx.teamMember.findMany({
+            where: { teamId: listing.teamId, leftAt: null },
+            select: { userId: true },
+          }),
+          tx.teamMember.findMany({
+            where: { teamId: request.requestingTeamId, leftAt: null },
+            select: { userId: true },
+          }),
         ]);
         const sideA = new Set(membersA.map((m) => m.userId));
         const participants = [
           ...[...sideA].map((userId) => ({ userId, side: 'A' as const })),
-          ...membersB.filter((m) => !sideA.has(m.userId)).map((m) => ({ userId: m.userId, side: 'B' as const })),
+          ...membersB
+            .filter((m) => !sideA.has(m.userId))
+            .map((m) => ({ userId: m.userId, side: 'B' as const })),
         ];
         const match = await tx.match.create({
           data: {
@@ -317,23 +480,43 @@ export class OpponentsService {
         });
         matchId = match.id;
         await this.audit.record(
-          { actorId: user.id, actorRole: 'USER', action: 'opponent.request_accept', entityType: 'OpponentListing', entityId: listingId, after: { requestId, matchId } },
+          {
+            actorId: user.id,
+            actorRole: 'USER',
+            action: 'opponent.request_accept',
+            entityType: 'OpponentListing',
+            entityId: listingId,
+            after: { requestId, matchId },
+          },
           ctx,
           tx,
         );
       });
     } catch (error) {
-      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('BOOKING_NOT_ELIGIBLE', 'Cette réservation est déjà utilisée pour un autre match');
+      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+        throw conflict(
+          'BOOKING_NOT_ELIGIBLE',
+          'Cette réservation est déjà utilisée pour un autre match',
+        );
       throw error;
     }
 
     await this.events.emit('opponent.request_accepted', { requestId, listingId, matchId });
-    for (const id of rejected) await this.events.emit('opponent.request_rejected', { requestId: id, listingId });
+    for (const id of rejected)
+      await this.events.emit('opponent.request_rejected', { requestId: id, listingId });
     return this.matches.view(matchId);
   }
 
-  async reject(user: AuthUser, listingId: string, requestId: string, now: Date = new Date()): Promise<void> {
-    const listing = await this.prisma.opponentListing.findUnique({ where: { id: listingId }, select: { teamId: true } });
+  async reject(
+    user: AuthUser,
+    listingId: string,
+    requestId: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const listing = await this.prisma.opponentListing.findUnique({
+      where: { id: listingId },
+      select: { teamId: true },
+    });
     if (!listing) throw notFound();
     await this.teams.requireCaptain(user.id, listing.teamId);
     const result = await this.prisma.matchRequest.updateMany({
@@ -346,7 +529,10 @@ export class OpponentsService {
 
   /** L'équipe demandeuse retire sa demande tant qu'elle est en attente. */
   async cancelRequest(user: AuthUser, requestId: string, now: Date = new Date()): Promise<void> {
-    const request = await this.prisma.matchRequest.findUnique({ where: { id: requestId }, select: { requestingTeamId: true } });
+    const request = await this.prisma.matchRequest.findUnique({
+      where: { id: requestId },
+      select: { requestingTeamId: true },
+    });
     if (!request) throw Errors.notFound('Demande introuvable');
     await this.teams.requireCaptain(user.id, request.requestingTeamId);
     const result = await this.prisma.matchRequest.updateMany({
@@ -359,7 +545,12 @@ export class OpponentsService {
   // ───────────────────────── Internes ─────────────────────────
 
   /** L'équipe n'a aucun match à venir qui chevauche cette plage. */
-  private async requireTeamFree(tx: Prisma.TransactionClient, teamId: string, startsAt: Date, end: Date): Promise<void> {
+  private async requireTeamFree(
+    tx: Prisma.TransactionClient,
+    teamId: string,
+    startsAt: Date,
+    end: Date,
+  ): Promise<void> {
     const clash = await tx.match.count({
       where: {
         status: 'SCHEDULED',
@@ -368,25 +559,41 @@ export class OpponentsService {
         OR: [{ teamAId: teamId }, { teamBId: teamId }],
       },
     });
-    if (clash > 0) throw conflict('SCHEDULE_CONFLICT', 'Votre équipe a déjà un match sur ce créneau');
+    if (clash > 0)
+      throw conflict('SCHEDULE_CONFLICT', 'Votre équipe a déjà un match sur ce créneau');
   }
 
   private async isConcerned(row: ListingRow, viewer: AuthUser | null): Promise<boolean> {
     if (!viewer) return false;
     if (viewer.platformRole === 'ADMIN') return true;
     const [team, requester, staff] = await Promise.all([
-      this.prisma.teamMember.count({ where: { teamId: row.teamId, userId: viewer.id, leftAt: null } }),
-      this.prisma.matchRequest.count({ where: { listingId: row.id, requestingTeam: { members: { some: { userId: viewer.id, role: 'CAPTAIN', leftAt: null } } } } }),
+      this.prisma.teamMember.count({
+        where: { teamId: row.teamId, userId: viewer.id, leftAt: null },
+      }),
+      this.prisma.matchRequest.count({
+        where: {
+          listingId: row.id,
+          requestingTeam: {
+            members: { some: { userId: viewer.id, role: 'CAPTAIN', leftAt: null } },
+          },
+        },
+      }),
       this.prisma.venueStaff.count({ where: { venueId: row.venueId, userId: viewer.id } }),
     ]);
     return team + requester + staff > 0;
   }
 
-  private async toViews(rows: ListingRow[], viewer: AuthUser | null): Promise<OpponentListingView[]> {
+  private async toViews(
+    rows: ListingRow[],
+    viewer: AuthUser | null,
+  ): Promise<OpponentListingView[]> {
     if (rows.length === 0) return [];
     const ids = rows.map((r) => r.id);
     let captainOf = new Set<string>();
-    const mine = new Map<string, { id: string; status: MatchRequestView['status']; teamId: string }>();
+    const mine = new Map<
+      string,
+      { id: string; status: MatchRequestView['status']; teamId: string }
+    >();
     const pending = new Map<string, number>();
 
     if (viewer) {
@@ -401,7 +608,9 @@ export class OpponentsService {
           orderBy: { createdAt: 'desc' },
           select: { id: true, listingId: true, status: true, requestingTeamId: true },
         });
-        for (const r of requests) if (!mine.has(r.listingId)) mine.set(r.listingId, { id: r.id, status: r.status, teamId: r.requestingTeamId });
+        for (const r of requests)
+          if (!mine.has(r.listingId))
+            mine.set(r.listingId, { id: r.id, status: r.status, teamId: r.requestingTeamId });
         const counts = await this.prisma.matchRequest.groupBy({
           by: ['listingId'],
           where: { listingId: { in: ids }, status: 'REQUESTED' },

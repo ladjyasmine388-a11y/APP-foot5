@@ -15,7 +15,11 @@ import { PrismaService } from '../../infra/database/prisma.service.js';
 import { DomainEvents } from '../../infra/events/domain-events.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
-import { MatchingStrategy, type PlayerProfile, type SessionCandidate } from '../matching/matching.strategy.js';
+import {
+  MatchingStrategy,
+  type PlayerProfile,
+  type SessionCandidate,
+} from '../matching/matching.strategy.js';
 import {
   PLATFORM_TZ,
   conflict,
@@ -78,18 +82,28 @@ export class SoloSessionsService {
     opts: { venueId?: string } = {},
     now: Date = new Date(),
   ): Promise<SoloSessionView> {
-    const access = opts.venueId ? await this.policies.requireVenueRole(user, opts.venueId, 'STAFF') : null;
+    const access = opts.venueId
+      ? await this.policies.requireVenueRole(user, opts.venueId, 'STAFF')
+      : null;
     const origin = opts.venueId ? 'VENUE' : 'PLAYER';
 
     const sessionId = await this.prisma.$transaction(async (tx) => {
       await lockBooking(tx, input.bookingId);
-      const booking = await requireEligibleBooking(tx, input.bookingId, opts.venueId ? { venueId: opts.venueId } : { ownerId: user.id }, now);
+      const booking = await requireEligibleBooking(
+        tx,
+        input.bookingId,
+        opts.venueId ? { venueId: opts.venueId } : { ownerId: user.id },
+        now,
+      );
 
       const maxSpots = booking.fieldCapacity - (origin === 'PLAYER' ? 1 : 0);
       if (input.spots > maxSpots) {
-        throw new AppException('VALIDATION_ERROR', HttpStatus.BAD_REQUEST, `Ce terrain accueille ${maxSpots} joueur(s) à recruter au maximum`, [
-          { path: 'spots', message: `Maximum ${maxSpots}`, code: 'too_big' },
-        ]);
+        throw new AppException(
+          'VALIDATION_ERROR',
+          HttpStatus.BAD_REQUEST,
+          `Ce terrain accueille ${maxSpots} joueur(s) à recruter au maximum`,
+          [{ path: 'spots', message: `Maximum ${maxSpots}`, code: 'too_big' }],
+        );
       }
 
       const session = await tx.soloSession.create({
@@ -119,7 +133,8 @@ export class SoloSessionsService {
           soloSessionId: session.id,
           level: input.level ?? null,
           createdById: user.id,
-          participants: origin === 'PLAYER' ? { create: { userId: user.id, side: 'NONE' } } : undefined,
+          participants:
+            origin === 'PLAYER' ? { create: { userId: user.id, side: 'NONE' } } : undefined,
         },
         select: { id: true },
       });
@@ -151,23 +166,39 @@ export class SoloSessionsService {
       await lockSoloSession(tx, sessionId);
       const session = await tx.soloSession.findUnique({
         where: { id: sessionId },
-        include: { venue: { select: { city: true, status: true } }, match: { select: { id: true } } },
+        include: {
+          venue: { select: { city: true, status: true } },
+          match: { select: { id: true } },
+        },
       });
       if (!session || session.venue.status !== 'APPROVED') throw notFound();
-      if (session.status === 'CANCELLED' || session.status === 'COMPLETED' || session.startsAt <= now) {
+      if (
+        session.status === 'CANCELLED' ||
+        session.status === 'COMPLETED' ||
+        session.startsAt <= now
+      ) {
         throw conflict('SESSION_CLOSED', 'Cette session n’accepte plus d’inscriptions');
       }
       if (session.origin === 'PLAYER' && session.createdById === user.id) {
         throw conflict('ALREADY_JOINED', 'Vous organisez déjà cette session');
       }
-      if (session.joinedCount >= session.capacity) throw conflict('SESSION_FULL', 'Cette session est complète');
+      if (session.joinedCount >= session.capacity)
+        throw conflict('SESSION_FULL', 'Cette session est complète');
 
-      const existing = await tx.soloPlayer.findUnique({ where: { sessionId_userId: { sessionId, userId: user.id } } });
-      if (existing?.status === 'JOINED') throw conflict('ALREADY_JOINED', 'Vous participez déjà à cette session');
+      const existing = await tx.soloPlayer.findUnique({
+        where: { sessionId_userId: { sessionId, userId: user.id } },
+      });
+      if (existing?.status === 'JOINED')
+        throw conflict('ALREADY_JOINED', 'Vous participez déjà à cette session');
 
       const me = await tx.user.findUniqueOrThrow({
         where: { id: user.id },
-        select: { level: true, preferredPosition: true, city: true, stats: { select: { reliabilityScore: true } } },
+        select: {
+          level: true,
+          preferredPosition: true,
+          city: true,
+          stats: { select: { reliabilityScore: true } },
+        },
       });
       const profile: PlayerProfile = {
         id: user.id,
@@ -193,7 +224,10 @@ export class SoloSessionsService {
 
       const joinedCount = session.joinedCount + 1;
       const full = joinedCount >= session.capacity;
-      await tx.soloSession.update({ where: { id: sessionId }, data: { joinedCount, status: full ? 'FULL' : 'OPEN' } });
+      await tx.soloSession.update({
+        where: { id: sessionId },
+        data: { joinedCount, status: full ? 'FULL' : 'OPEN' },
+      });
       await tx.soloPlayer.upsert({
         where: { sessionId_userId: { sessionId, userId: user.id } },
         create: { sessionId, userId: user.id },
@@ -209,7 +243,11 @@ export class SoloSessionsService {
       return { remaining: session.capacity - joinedCount, full };
     });
 
-    await this.events.emit('solo.player_joined', { sessionId, userId: user.id, remaining: outcome.remaining });
+    await this.events.emit('solo.player_joined', {
+      sessionId,
+      userId: user.id,
+      remaining: outcome.remaining,
+    });
     if (outcome.full) await this.events.emit('solo.full', { sessionId });
     return this.getView(sessionId, user.id);
   }
@@ -217,26 +255,53 @@ export class SoloSessionsService {
   async leave(user: AuthUser, sessionId: string, now: Date = new Date()): Promise<void> {
     const remaining = await this.prisma.$transaction(async (tx) => {
       await lockSoloSession(tx, sessionId);
-      const session = await tx.soloSession.findUnique({ where: { id: sessionId }, include: { match: { select: { id: true } } } });
+      const session = await tx.soloSession.findUnique({
+        where: { id: sessionId },
+        include: { match: { select: { id: true } } },
+      });
       if (!session) throw notFound();
-      const player = await tx.soloPlayer.findUnique({ where: { sessionId_userId: { sessionId, userId: user.id } } });
-      if (!player || player.status !== 'JOINED') throw Errors.notFound('Vous ne participez pas à cette session');
-      if (session.status === 'CANCELLED' || session.status === 'COMPLETED' || session.startsAt <= now) {
+      const player = await tx.soloPlayer.findUnique({
+        where: { sessionId_userId: { sessionId, userId: user.id } },
+      });
+      if (!player || player.status !== 'JOINED')
+        throw Errors.notFound('Vous ne participez pas à cette session');
+      if (
+        session.status === 'CANCELLED' ||
+        session.status === 'COMPLETED' ||
+        session.startsAt <= now
+      ) {
         throw conflict('SESSION_CLOSED', 'Cette session est terminée ou a déjà commencé');
       }
 
-      await tx.soloPlayer.update({ where: { id: player.id }, data: { status: 'LEFT', leftAt: now } });
+      await tx.soloPlayer.update({
+        where: { id: player.id },
+        data: { status: 'LEFT', leftAt: now },
+      });
       const joinedCount = Math.max(0, session.joinedCount - 1);
-      await tx.soloSession.update({ where: { id: sessionId }, data: { joinedCount, status: 'OPEN' } });
-      if (session.match) await tx.matchParticipant.deleteMany({ where: { matchId: session.match.id, userId: user.id } });
+      await tx.soloSession.update({
+        where: { id: sessionId },
+        data: { joinedCount, status: 'OPEN' },
+      });
+      if (session.match)
+        await tx.matchParticipant.deleteMany({
+          where: { matchId: session.match.id, userId: user.id },
+        });
       return session.capacity - joinedCount;
     });
     await this.events.emit('solo.player_left', { sessionId, userId: user.id, remaining });
   }
 
   /** Annulation par l'hôte, ou par le personnel du complexe. La réservation de terrain reste acquise. */
-  async cancel(user: AuthUser, sessionId: string, ctx: RequestContext, now: Date = new Date()): Promise<void> {
-    const session = await this.prisma.soloSession.findUnique({ where: { id: sessionId }, select: { createdById: true, venueId: true, startsAt: true } });
+  async cancel(
+    user: AuthUser,
+    sessionId: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const session = await this.prisma.soloSession.findUnique({
+      where: { id: sessionId },
+      select: { createdById: true, venueId: true, startsAt: true },
+    });
     if (!session) throw notFound();
     let role = 'USER';
     if (session.createdById !== user.id) {
@@ -247,8 +312,19 @@ export class SoloSessionsService {
     const outcome = await this.prisma.$transaction(async (tx) => {
       await lockSoloSession(tx, sessionId);
       const result = await cancelSoloSessionTx(tx, sessionId);
-      if (result.solo.length === 0) throw conflict('SESSION_CLOSED', 'Cette session est déjà fermée');
-      await this.audit.record({ actorId: user.id, actorRole: role, action: 'solo.cancel', entityType: 'SoloSession', entityId: sessionId }, ctx, tx);
+      if (result.solo.length === 0)
+        throw conflict('SESSION_CLOSED', 'Cette session est déjà fermée');
+      await this.audit.record(
+        {
+          actorId: user.id,
+          actorRole: role,
+          action: 'solo.cancel',
+          entityType: 'SoloSession',
+          entityId: sessionId,
+        },
+        ctx,
+        tx,
+      );
       return result;
     });
     await emitOutcome(this.events, outcome);
@@ -257,7 +333,11 @@ export class SoloSessionsService {
   // ───────────────────────── Consultation ─────────────────────────
 
   /** Sessions ouvertes, filtrées par lieu / date / heure / niveau / places, triées. Aucune donnée personnelle hors connexion. */
-  async list(query: ListSoloSessionsQuery, viewer: AuthUser | null, now: Date = new Date()): Promise<PageOf<SoloSessionView>> {
+  async list(
+    query: ListSoloSessionsQuery,
+    viewer: AuthUser | null,
+    now: Date = new Date(),
+  ): Promise<PageOf<SoloSessionView>> {
     const offset = decodeOffset(query.cursor);
     const startsAt: Prisma.DateTimeFilter = { gt: now };
     if (query.date) {
@@ -290,7 +370,11 @@ export class SoloSessionsService {
     let ordered = rows.filter((r) => r.capacity - r.joinedCount >= (query.spots ?? 1));
     if (query.sort === 'spots') {
       // Les sessions les plus proches d'être complètes d'abord : c'est là qu'un joueur de plus change tout.
-      ordered = [...ordered].sort((a, b) => a.capacity - a.joinedCount - (b.capacity - b.joinedCount) || a.startsAt.getTime() - b.startsAt.getTime());
+      ordered = [...ordered].sort(
+        (a, b) =>
+          a.capacity - a.joinedCount - (b.capacity - b.joinedCount) ||
+          a.startsAt.getTime() - b.startsAt.getTime(),
+      );
     } else if (query.sort === 'recommended' && viewer) {
       const profile = await this.profileOf(viewer.id);
       const byId = new Map(ordered.map((r) => [r.id, r]));
@@ -302,7 +386,9 @@ export class SoloSessionsService {
         remaining: r.capacity - r.joinedCount,
         spots: r.capacity,
       }));
-      ordered = this.matching.rank(profile, candidates, now).flatMap(({ session }) => byId.get(session.id) ?? []);
+      ordered = this.matching
+        .rank(profile, candidates, now)
+        .flatMap(({ session }) => byId.get(session.id) ?? []);
     }
 
     const page = ordered.slice(offset, offset + query.limit);
@@ -313,14 +399,27 @@ export class SoloSessionsService {
   }
 
   /** Mes sessions : celles que j'organise et celles où je suis inscrit. */
-  async listMine(user: AuthUser, query: ListMyActivityQuery, now: Date = new Date()): Promise<PageOf<SoloSessionView>> {
+  async listMine(
+    user: AuthUser,
+    query: ListMyActivityQuery,
+    now: Date = new Date(),
+  ): Promise<PageOf<SoloSessionView>> {
     const offset = decodeOffset(query.cursor);
     const when: Prisma.SoloSessionWhereInput =
-      query.when === 'upcoming' ? { endsAt: { gt: now } } : query.when === 'past' ? { endsAt: { lte: now } } : {};
+      query.when === 'upcoming'
+        ? { endsAt: { gt: now } }
+        : query.when === 'past'
+          ? { endsAt: { lte: now } }
+          : {};
     const rows = await this.prisma.soloSession.findMany({
       where: {
         AND: [
-          { OR: [{ origin: 'PLAYER', createdById: user.id }, { players: { some: { userId: user.id, status: 'JOINED' } } }] },
+          {
+            OR: [
+              { origin: 'PLAYER', createdById: user.id },
+              { players: { some: { userId: user.id, status: 'JOINED' } } },
+            ],
+          },
           when,
         ],
       },
@@ -339,7 +438,8 @@ export class SoloSessionsService {
   async getForViewer(id: string, viewer: AuthUser | null): Promise<SoloSessionView> {
     const row = await this.prisma.soloSession.findUnique({ where: { id }, include: soloInclude });
     if (!row) throw notFound();
-    const publicVisible = (row.status === 'OPEN' || row.status === 'FULL') && (await this.isApproved(row.venueId));
+    const publicVisible =
+      (row.status === 'OPEN' || row.status === 'FULL') && (await this.isApproved(row.venueId));
     if (!publicVisible && !(await this.isConcerned(row, viewer))) throw notFound();
     return this.toView(row, viewer?.id ?? null);
   }
@@ -354,19 +454,36 @@ export class SoloSessionsService {
     if (!viewer) return false;
     if (viewer.platformRole === 'ADMIN' || row.createdById === viewer.id) return true;
     if (row.players.some((p) => p.userId === viewer.id)) return true;
-    return (await this.prisma.venueStaff.count({ where: { venueId: row.venueId, userId: viewer.id } })) > 0;
+    return (
+      (await this.prisma.venueStaff.count({ where: { venueId: row.venueId, userId: viewer.id } })) >
+      0
+    );
   }
 
   private async profileOf(userId: string): Promise<PlayerProfile> {
     const me = await this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { level: true, preferredPosition: true, city: true, stats: { select: { reliabilityScore: true } } },
+      select: {
+        level: true,
+        preferredPosition: true,
+        city: true,
+        stats: { select: { reliabilityScore: true } },
+      },
     });
-    return { id: userId, level: me.level, preferredPosition: me.preferredPosition, city: me.city, reliabilityScore: me.stats?.reliabilityScore ?? 100 };
+    return {
+      id: userId,
+      level: me.level,
+      preferredPosition: me.preferredPosition,
+      city: me.city,
+      reliabilityScore: me.stats?.reliabilityScore ?? 100,
+    };
   }
 
   private async getView(id: string, viewerId: string | null): Promise<SoloSessionView> {
-    const row = await this.prisma.soloSession.findUniqueOrThrow({ where: { id }, include: soloInclude });
+    const row = await this.prisma.soloSession.findUniqueOrThrow({
+      where: { id },
+      include: soloInclude,
+    });
     return this.toView(row, viewerId);
   }
 
@@ -392,9 +509,17 @@ export class SoloSessionsService {
       host: hostIsPlayer
         ? { id: r.createdBy.id, name: nameOf(r.createdBy), avatarUrl: r.createdBy.avatarUrl }
         : { id: r.venue.id, name: r.venue.name, avatarUrl: null },
-      joined: viewerId !== null && (r.players.some((p) => p.userId === viewerId) || (isHost && hostIsPlayer)),
+      joined:
+        viewerId !== null &&
+        (r.players.some((p) => p.userId === viewerId) || (isHost && hostIsPlayer)),
       isHost,
-      players: viewerId ? r.players.map((p) => ({ id: p.user.id, name: displayName(p.user), avatarUrl: p.user.avatarUrl })) : null,
+      players: viewerId
+        ? r.players.map((p) => ({
+            id: p.user.id,
+            name: displayName(p.user),
+            avatarUrl: p.user.avatarUrl,
+          }))
+        : null,
       matchId: r.match?.id ?? null,
     };
   }

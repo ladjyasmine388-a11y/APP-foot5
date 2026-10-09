@@ -27,16 +27,29 @@ import { Mailer } from '../../infra/mail/mailer.js';
 import { AuditService } from '../audit/audit.service.js';
 import type { AuthUser } from '../auth/auth.types.js';
 
-const conflict = (code: 'CONFLICT' | 'TEAM_FULL' | 'TEAM_LIMIT_REACHED' | 'ALREADY_JOINED', message: string): AppException =>
-  new AppException(code, HttpStatus.CONFLICT, message);
-const notCaptain = (): AppException => new AppException('NOT_CAPTAIN', HttpStatus.FORBIDDEN, 'Réservé au capitaine de l’équipe');
+const conflict = (
+  code: 'CONFLICT' | 'TEAM_FULL' | 'TEAM_LIMIT_REACHED' | 'ALREADY_JOINED',
+  message: string,
+): AppException => new AppException(code, HttpStatus.CONFLICT, message);
+const notCaptain = (): AppException =>
+  new AppException('NOT_CAPTAIN', HttpStatus.FORBIDDEN, 'Réservé au capitaine de l’équipe');
 
 /** Nom affichable : jamais d'identité d'un compte supprimé. */
-export function displayName(user: { firstName: string; lastName: string; status?: string }): string {
+export function displayName(user: {
+  firstName: string;
+  lastName: string;
+  status?: string;
+}): string {
   return user.status === 'DELETED' ? 'Utilisateur supprimé' : `${user.firstName} ${user.lastName}`;
 }
 
-const personSelect = { id: true, firstName: true, lastName: true, avatarUrl: true, status: true } as const;
+const personSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  avatarUrl: true,
+  status: true,
+} as const;
 
 /** Offset opaque pour les listes (même convention que le reste de l'API). */
 export function encodeOffset(offset: number): string {
@@ -46,11 +59,16 @@ export function decodeOffset(cursor: string | undefined): number {
   if (!cursor) return 0;
   try {
     const parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString()) as { o?: unknown };
-    if (typeof parsed.o === 'number' && Number.isInteger(parsed.o) && parsed.o >= 0) return parsed.o;
+    if (typeof parsed.o === 'number' && Number.isInteger(parsed.o) && parsed.o >= 0)
+      return parsed.o;
   } catch {
     /* erreur ci-dessous */
   }
-  throw new AppException('VALIDATION_ERROR', HttpStatus.BAD_REQUEST, 'Curseur de pagination invalide');
+  throw new AppException(
+    'VALIDATION_ERROR',
+    HttpStatus.BAD_REQUEST,
+    'Curseur de pagination invalide',
+  );
 }
 
 @Injectable()
@@ -86,7 +104,14 @@ export class TeamsService {
           },
         });
         await this.audit.record(
-          { actorId: user.id, actorRole: 'USER', action: 'team.create', entityType: 'Team', entityId: created.id, after: { name: created.name } },
+          {
+            actorId: user.id,
+            actorRole: 'USER',
+            action: 'team.create',
+            entityType: 'Team',
+            entityId: created.id,
+            after: { name: created.name },
+          },
           ctx,
           tx,
         );
@@ -94,7 +119,8 @@ export class TeamsService {
       });
       return this.getView(team.id, user.id);
     } catch (error) {
-      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('CONFLICT', 'Une équipe porte déjà ce nom');
+      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+        throw conflict('CONFLICT', 'Une équipe porte déjà ce nom');
       throw error;
     }
   }
@@ -134,7 +160,12 @@ export class TeamsService {
     return rows.map((t) => this.toView(t, user.id));
   }
 
-  async update(user: AuthUser, teamId: string, input: UpdateTeamInput, ctx: RequestContext): Promise<TeamView> {
+  async update(
+    user: AuthUser,
+    teamId: string,
+    input: UpdateTeamInput,
+    ctx: RequestContext,
+  ): Promise<TeamView> {
     await this.requireCaptain(user.id, teamId);
     try {
       await this.prisma.$transaction(async (tx) => {
@@ -147,7 +178,9 @@ export class TeamsService {
             action: 'team.update',
             entityType: 'Team',
             entityId: teamId,
-            before: Object.fromEntries(Object.keys(input).map((k) => [k, (before as Record<string, unknown>)[k] ?? null])) as Prisma.InputJsonValue,
+            before: Object.fromEntries(
+              Object.keys(input).map((k) => [k, (before as Record<string, unknown>)[k] ?? null]),
+            ) as Prisma.InputJsonValue,
             after: input as Prisma.InputJsonValue,
           },
           ctx,
@@ -155,19 +188,31 @@ export class TeamsService {
         );
       });
     } catch (error) {
-      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('CONFLICT', 'Une équipe porte déjà ce nom');
+      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+        throw conflict('CONFLICT', 'Une équipe porte déjà ce nom');
       throw error;
     }
     return this.getView(teamId, user.id);
   }
 
   /** Dissolution : refusée tant que l'équipe a une annonce ou un match à venir (les autres équipes comptent dessus). */
-  async delete(user: AuthUser, teamId: string, ctx: RequestContext, now: Date = new Date()): Promise<void> {
+  async delete(
+    user: AuthUser,
+    teamId: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
     await this.requireCaptain(user.id, teamId);
     const [listings, matches] = await Promise.all([
-      this.prisma.opponentListing.count({ where: { teamId, status: { in: ['OPEN', 'ACCEPTED'] }, startsAt: { gt: now } } }),
+      this.prisma.opponentListing.count({
+        where: { teamId, status: { in: ['OPEN', 'ACCEPTED'] }, startsAt: { gt: now } },
+      }),
       this.prisma.match.count({
-        where: { status: 'SCHEDULED', startsAt: { gt: now }, OR: [{ teamAId: teamId }, { teamBId: teamId }] },
+        where: {
+          status: 'SCHEDULED',
+          startsAt: { gt: now },
+          OR: [{ teamAId: teamId }, { teamBId: teamId }],
+        },
       }),
     ]);
     if (listings + matches > 0) {
@@ -177,8 +222,21 @@ export class TeamsService {
     await this.prisma.$transaction(async (tx) => {
       await tx.team.update({ where: { id: teamId }, data: { deletedAt: now } });
       await tx.teamMember.updateMany({ where: { teamId, leftAt: null }, data: { leftAt: now } });
-      await tx.teamInvitation.updateMany({ where: { teamId, status: 'PENDING' }, data: { status: 'CANCELLED', respondedAt: now } });
-      await this.audit.record({ actorId: user.id, actorRole: 'USER', action: 'team.delete', entityType: 'Team', entityId: teamId }, ctx, tx);
+      await tx.teamInvitation.updateMany({
+        where: { teamId, status: 'PENDING' },
+        data: { status: 'CANCELLED', respondedAt: now },
+      });
+      await this.audit.record(
+        {
+          actorId: user.id,
+          actorRole: 'USER',
+          action: 'team.delete',
+          entityType: 'Team',
+          entityId: teamId,
+        },
+        ctx,
+        tx,
+      );
     });
   }
 
@@ -203,15 +261,38 @@ export class TeamsService {
     }));
   }
 
-  async removeMember(user: AuthUser, teamId: string, memberId: string, ctx: RequestContext, now: Date = new Date()): Promise<void> {
+  async removeMember(
+    user: AuthUser,
+    teamId: string,
+    memberId: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
     await this.requireCaptain(user.id, teamId);
     if (memberId === user.id) {
-      throw conflict('CONFLICT', 'Le capitaine ne peut pas se retirer : transférez d’abord la capitainerie');
+      throw conflict(
+        'CONFLICT',
+        'Le capitaine ne peut pas se retirer : transférez d’abord la capitainerie',
+      );
     }
     const removed = await this.prisma.$transaction(async (tx) => {
-      const result = await tx.teamMember.updateMany({ where: { teamId, userId: memberId, leftAt: null }, data: { leftAt: now } });
+      const result = await tx.teamMember.updateMany({
+        where: { teamId, userId: memberId, leftAt: null },
+        data: { leftAt: now },
+      });
       if (result.count > 0) {
-        await this.audit.record({ actorId: user.id, actorRole: 'USER', action: 'team.remove_member', entityType: 'Team', entityId: teamId, after: { userId: memberId } }, ctx, tx);
+        await this.audit.record(
+          {
+            actorId: user.id,
+            actorRole: 'USER',
+            action: 'team.remove_member',
+            entityType: 'Team',
+            entityId: teamId,
+            after: { userId: memberId },
+          },
+          ctx,
+          tx,
+        );
       }
       return result.count;
     });
@@ -219,32 +300,61 @@ export class TeamsService {
     await this.events.emit('team.member_removed', { teamId, userId: memberId });
   }
 
-  async leave(user: AuthUser, teamId: string, ctx: RequestContext, now: Date = new Date()): Promise<void> {
+  async leave(
+    user: AuthUser,
+    teamId: string,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
     await this.requireTeam(teamId);
     const membership = await this.requireMember(user, teamId);
     if (membership.role === 'CAPTAIN') {
-      const others = await this.prisma.teamMember.count({ where: { teamId, leftAt: null, userId: { not: user.id } } });
-      if (others > 0) throw conflict('CONFLICT', 'Transférez la capitainerie avant de quitter l’équipe');
+      const others = await this.prisma.teamMember.count({
+        where: { teamId, leftAt: null, userId: { not: user.id } },
+      });
+      if (others > 0)
+        throw conflict('CONFLICT', 'Transférez la capitainerie avant de quitter l’équipe');
       await this.delete(user, teamId, ctx, now); // dernier membre : l'équipe est dissoute
       return;
     }
-    await this.prisma.teamMember.updateMany({ where: { teamId, userId: user.id, leftAt: null }, data: { leftAt: now } });
+    await this.prisma.teamMember.updateMany({
+      where: { teamId, userId: user.id, leftAt: null },
+      data: { leftAt: now },
+    });
     await this.events.emit('team.member_removed', { teamId, userId: user.id });
   }
 
-  async transferCaptaincy(user: AuthUser, teamId: string, input: TransferCaptaincyInput, ctx: RequestContext): Promise<TeamView> {
+  async transferCaptaincy(
+    user: AuthUser,
+    teamId: string,
+    input: TransferCaptaincyInput,
+    ctx: RequestContext,
+  ): Promise<TeamView> {
     await this.requireCaptain(user.id, teamId);
     if (input.userId === user.id) throw conflict('CONFLICT', 'Vous êtes déjà capitaine');
 
     await this.prisma.$transaction(async (tx) => {
-      const target = await tx.teamMember.findFirst({ where: { teamId, userId: input.userId, leftAt: null } });
+      const target = await tx.teamMember.findFirst({
+        where: { teamId, userId: input.userId, leftAt: null },
+      });
       if (!target) throw Errors.notFound('Ce joueur n’est pas membre de l’équipe');
       // Ordre imposé par l'index unique « un seul capitaine actif » : on retire d'abord le rôle à l'ancien.
-      await tx.teamMember.updateMany({ where: { teamId, userId: user.id, leftAt: null }, data: { role: 'MEMBER' } });
+      await tx.teamMember.updateMany({
+        where: { teamId, userId: user.id, leftAt: null },
+        data: { role: 'MEMBER' },
+      });
       await tx.teamMember.update({ where: { id: target.id }, data: { role: 'CAPTAIN' } });
       await tx.team.update({ where: { id: teamId }, data: { captainId: input.userId } });
       await this.audit.record(
-        { actorId: user.id, actorRole: 'USER', action: 'team.transfer_captaincy', entityType: 'Team', entityId: teamId, before: { captainId: user.id }, after: { captainId: input.userId } },
+        {
+          actorId: user.id,
+          actorRole: 'USER',
+          action: 'team.transfer_captaincy',
+          entityType: 'Team',
+          entityId: teamId,
+          before: { captainId: user.id },
+          after: { captainId: input.userId },
+        },
         ctx,
         tx,
       );
@@ -254,28 +364,50 @@ export class TeamsService {
 
   // ───────────────────────── Invitations ─────────────────────────
 
-  async invite(user: AuthUser, teamId: string, input: InviteToTeamInput, now: Date = new Date()): Promise<TeamInvitationAdminView> {
+  async invite(
+    user: AuthUser,
+    teamId: string,
+    input: InviteToTeamInput,
+    now: Date = new Date(),
+  ): Promise<TeamInvitationAdminView> {
     await this.requireCaptain(user.id, teamId);
-    const team = await this.prisma.team.findUniqueOrThrow({ where: { id: teamId }, select: { name: true } });
+    const team = await this.prisma.team.findUniqueOrThrow({
+      where: { id: teamId },
+      select: { name: true },
+    });
 
     // Une personne invitée par son email est reliée à son compte s'il existe déjà.
     const invitee = await this.prisma.user.findFirst({
       where: input.userId ? { id: input.userId } : { email: input.email },
-      select: { id: true, email: true, locale: true, firstName: true, lastName: true, status: true },
+      select: {
+        id: true,
+        email: true,
+        locale: true,
+        firstName: true,
+        lastName: true,
+        status: true,
+      },
     });
     if (input.userId && !invitee) throw Errors.notFound('Joueur introuvable');
     if (invitee && invitee.status !== 'ACTIVE') throw Errors.notFound('Joueur introuvable');
-    if (invitee?.id === user.id) throw conflict('CONFLICT', 'Vous ne pouvez pas vous inviter vous-même');
+    if (invitee?.id === user.id)
+      throw conflict('CONFLICT', 'Vous ne pouvez pas vous inviter vous-même');
 
     const [members, pending] = await Promise.all([
       this.prisma.teamMember.count({ where: { teamId, leftAt: null } }),
-      this.prisma.teamInvitation.count({ where: { teamId, status: 'PENDING', expiresAt: { gt: now } } }),
+      this.prisma.teamInvitation.count({
+        where: { teamId, status: 'PENDING', expiresAt: { gt: now } },
+      }),
     ]);
-    if (members >= TEAM_MAX_MEMBERS) throw conflict('TEAM_FULL', `Une équipe compte ${TEAM_MAX_MEMBERS} joueurs au maximum`);
-    if (pending >= TEAM_MAX_PENDING_INVITATIONS) throw conflict('CONFLICT', 'Trop d’invitations en attente');
+    if (members >= TEAM_MAX_MEMBERS)
+      throw conflict('TEAM_FULL', `Une équipe compte ${TEAM_MAX_MEMBERS} joueurs au maximum`);
+    if (pending >= TEAM_MAX_PENDING_INVITATIONS)
+      throw conflict('CONFLICT', 'Trop d’invitations en attente');
 
     if (invitee) {
-      const already = await this.prisma.teamMember.count({ where: { teamId, userId: invitee.id, leftAt: null } });
+      const already = await this.prisma.teamMember.count({
+        where: { teamId, userId: invitee.id, leftAt: null },
+      });
       if (already > 0) throw conflict('ALREADY_JOINED', 'Ce joueur fait déjà partie de l’équipe');
     }
 
@@ -309,12 +441,17 @@ export class TeamsService {
       });
       return this.toAdminInvitation(invitation);
     } catch (error) {
-      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('CONFLICT', 'Une invitation est déjà en attente pour ce joueur');
+      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+        throw conflict('CONFLICT', 'Une invitation est déjà en attente pour ce joueur');
       throw error;
     }
   }
 
-  async listTeamInvitations(user: AuthUser, teamId: string, now: Date = new Date()): Promise<TeamInvitationAdminView[]> {
+  async listTeamInvitations(
+    user: AuthUser,
+    teamId: string,
+    now: Date = new Date(),
+  ): Promise<TeamInvitationAdminView[]> {
     await this.requireCaptain(user.id, teamId);
     const rows = await this.prisma.teamInvitation.findMany({
       where: { teamId, status: 'PENDING', expiresAt: { gt: now } },
@@ -324,7 +461,12 @@ export class TeamsService {
     return rows.map((r) => this.toAdminInvitation(r));
   }
 
-  async cancelInvitation(user: AuthUser, teamId: string, invitationId: string, now: Date = new Date()): Promise<void> {
+  async cancelInvitation(
+    user: AuthUser,
+    teamId: string,
+    invitationId: string,
+    now: Date = new Date(),
+  ): Promise<void> {
     await this.requireCaptain(user.id, teamId);
     const result = await this.prisma.teamInvitation.updateMany({
       where: { id: invitationId, teamId, status: 'PENDING' },
@@ -335,7 +477,10 @@ export class TeamsService {
 
   /** Mes invitations en attente : adressées à mon compte, ou à mon adresse email VÉRIFIÉE. */
   async listMyInvitations(user: AuthUser, now: Date = new Date()): Promise<TeamInvitationView[]> {
-    const me = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { email: true, emailVerifiedAt: true } });
+    const me = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { email: true, emailVerifiedAt: true },
+    });
     const rows = await this.prisma.teamInvitation.findMany({
       where: {
         status: 'PENDING',
@@ -349,8 +494,15 @@ export class TeamsService {
     return rows.map((r) => this.toInvitation(r));
   }
 
-  async acceptInvitation(user: AuthUser, invitationId: string, now: Date = new Date()): Promise<TeamView> {
-    const me = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { email: true, emailVerifiedAt: true } });
+  async acceptInvitation(
+    user: AuthUser,
+    invitationId: string,
+    now: Date = new Date(),
+  ): Promise<TeamView> {
+    const me = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { email: true, emailVerifiedAt: true },
+    });
     let teamId = '';
 
     try {
@@ -361,7 +513,10 @@ export class TeamsService {
             id: invitationId,
             status: 'PENDING',
             expiresAt: { gt: now },
-            OR: [{ inviteeId: user.id }, ...(me.emailVerifiedAt ? [{ inviteeEmail: me.email }] : [])],
+            OR: [
+              { inviteeId: user.id },
+              ...(me.emailVerifiedAt ? [{ inviteeEmail: me.email }] : []),
+            ],
           },
           data: { status: 'ACCEPTED', respondedAt: now, inviteeId: user.id },
           select: { teamId: true },
@@ -370,24 +525,38 @@ export class TeamsService {
         if (!invitation) throw Errors.notFound('Invitation introuvable ou expirée');
         teamId = invitation.teamId;
 
-        const team = await tx.team.findFirst({ where: { id: teamId, deletedAt: null }, select: { id: true } });
+        const team = await tx.team.findFirst({
+          where: { id: teamId, deletedAt: null },
+          select: { id: true },
+        });
         if (!team) throw Errors.notFound('Cette équipe n’existe plus');
         const members = await tx.teamMember.count({ where: { teamId, leftAt: null } });
         if (members >= TEAM_MAX_MEMBERS) throw conflict('TEAM_FULL', 'Cette équipe est complète');
-        const already = await tx.teamMember.count({ where: { teamId, userId: user.id, leftAt: null } });
-        if (already > 0) throw conflict('ALREADY_JOINED', 'Vous faites déjà partie de cette équipe');
+        const already = await tx.teamMember.count({
+          where: { teamId, userId: user.id, leftAt: null },
+        });
+        if (already > 0)
+          throw conflict('ALREADY_JOINED', 'Vous faites déjà partie de cette équipe');
         await tx.teamMember.create({ data: { teamId, userId: user.id, role: 'MEMBER' } });
       });
     } catch (error) {
-      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) throw conflict('ALREADY_JOINED', 'Vous faites déjà partie de cette équipe');
+      if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION))
+        throw conflict('ALREADY_JOINED', 'Vous faites déjà partie de cette équipe');
       throw error;
     }
     await this.events.emit('team.invitation_accepted', { teamId, userId: user.id });
     return this.getView(teamId, user.id);
   }
 
-  async declineInvitation(user: AuthUser, invitationId: string, now: Date = new Date()): Promise<void> {
-    const me = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { email: true, emailVerifiedAt: true } });
+  async declineInvitation(
+    user: AuthUser,
+    invitationId: string,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const me = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { email: true, emailVerifiedAt: true },
+    });
     const result = await this.prisma.teamInvitation.updateMany({
       where: {
         id: invitationId,
@@ -404,19 +573,26 @@ export class TeamsService {
   /** Capitaine ACTIF de l'équipe, sinon : 404 si l'équipe n'existe pas, 403 NOT_CAPTAIN sinon. */
   async requireCaptain(userId: string, teamId: string) {
     await this.requireTeam(teamId);
-    const member = await this.prisma.teamMember.findFirst({ where: { teamId, userId, leftAt: null } });
+    const member = await this.prisma.teamMember.findFirst({
+      where: { teamId, userId, leftAt: null },
+    });
     if (!member || member.role !== 'CAPTAIN') throw notCaptain();
     return member;
   }
 
   async requireMember(user: AuthUser, teamId: string) {
-    const member = await this.prisma.teamMember.findFirst({ where: { teamId, userId: user.id, leftAt: null } });
+    const member = await this.prisma.teamMember.findFirst({
+      where: { teamId, userId: user.id, leftAt: null },
+    });
     if (!member) throw Errors.forbidden('Réservé aux membres de l’équipe');
     return member;
   }
 
   private async requireTeam(teamId: string) {
-    const team = await this.prisma.team.findFirst({ where: { id: teamId, deletedAt: null }, select: { id: true } });
+    const team = await this.prisma.team.findFirst({
+      where: { id: teamId, deletedAt: null },
+      select: { id: true },
+    });
     if (!team) throw Errors.notFound('Équipe introuvable');
     return team;
   }
@@ -432,12 +608,18 @@ export class TeamsService {
   }
 
   private async getView(teamId: string, viewerId: string | null): Promise<TeamView> {
-    const team = await this.prisma.team.findFirst({ where: { id: teamId, deletedAt: null }, include: this.teamInclude() });
+    const team = await this.prisma.team.findFirst({
+      where: { id: teamId, deletedAt: null },
+      include: this.teamInclude(),
+    });
     if (!team) throw Errors.notFound('Équipe introuvable');
     return this.toView(team, viewerId);
   }
 
-  private toView(team: Prisma.TeamGetPayload<{ include: ReturnType<TeamsService['teamInclude']> }>, viewerId: string | null): TeamView {
+  private toView(
+    team: Prisma.TeamGetPayload<{ include: ReturnType<TeamsService['teamInclude']> }>,
+    viewerId: string | null,
+  ): TeamView {
     const mine = viewerId ? team.members.find((m) => m.userId === viewerId) : undefined;
     return {
       id: team.id,
@@ -446,7 +628,11 @@ export class TeamsService {
       level: team.level,
       city: team.city,
       description: team.description,
-      captain: { id: team.captain.id, name: displayName(team.captain), avatarUrl: team.captain.avatarUrl },
+      captain: {
+        id: team.captain.id,
+        name: displayName(team.captain),
+        avatarUrl: team.captain.avatarUrl,
+      },
       memberCount: team._count.members,
       myRole: mine?.role ?? null,
       createdAt: team.createdAt.toISOString(),
@@ -461,7 +647,11 @@ export class TeamsService {
     } satisfies Prisma.TeamInvitationInclude;
   }
 
-  private toInvitation(row: Prisma.TeamInvitationGetPayload<{ include: ReturnType<TeamsService['invitationInclude']> }>): TeamInvitationView {
+  private toInvitation(
+    row: Prisma.TeamInvitationGetPayload<{
+      include: ReturnType<TeamsService['invitationInclude']>;
+    }>,
+  ): TeamInvitationView {
     return {
       id: row.id,
       team: row.team,
@@ -472,7 +662,14 @@ export class TeamsService {
     };
   }
 
-  private toAdminInvitation(row: Prisma.TeamInvitationGetPayload<{ include: ReturnType<TeamsService['invitationInclude']> }>): TeamInvitationAdminView {
-    return { ...this.toInvitation(row), invitee: row.invitee ? displayName(row.invitee) : (row.inviteeEmail ?? '') };
+  private toAdminInvitation(
+    row: Prisma.TeamInvitationGetPayload<{
+      include: ReturnType<TeamsService['invitationInclude']>;
+    }>,
+  ): TeamInvitationAdminView {
+    return {
+      ...this.toInvitation(row),
+      invitee: row.invitee ? displayName(row.invitee) : (row.inviteeEmail ?? ''),
+    };
   }
 }

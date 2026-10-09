@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
+    "e2e": "pnpm --filter @footfive/e2e e2e",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose -f docker/compose.dev.yml up -d",

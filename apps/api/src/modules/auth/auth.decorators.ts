@@ -23,10 +23,12 @@ export const RequireVerifiedEmail = (): MethodDecorator & ClassDecorator =>
   SetMetadata(VERIFIED_EMAIL_KEY, true);
 
 /** Utilisateur connecté s'il y en a un, `null` sinon : pour les routes @Public() dont la réponse dépend du visiteur. */
-export const OptionalUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthUser | null => {
-  const request = ctx.switchToHttp().getRequest<FastifyRequest>();
-  return request.authUser ?? null;
-});
+export const OptionalUser = createParamDecorator(
+  (_data: unknown, ctx: ExecutionContext): AuthUser | null => {
+    const request = ctx.switchToHttp().getRequest<FastifyRequest>();
+    return request.authUser ?? null;
+  },
+);
 
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthUser => {

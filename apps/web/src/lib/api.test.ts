@@ -1,9 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, api, buildUrl, getAccessToken, setAccessToken, setSessionLostHandler } from './api';
+import {
+  ApiError,
+  api,
+  buildUrl,
+  getAccessToken,
+  setAccessToken,
+  setSessionLostHandler,
+} from './api';
 
-const json = (status: number, body: unknown): Response => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+const json = (status: number, body: unknown): Response =>
+  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
 const errorBody = (code: string) => ({ error: { code, message: 'x', requestId: 'req-1' } });
-const authResponse = (token: string) => ({ accessToken: token, tokenType: 'Bearer', expiresIn: 900, user: { id: 'u1' } });
+const authResponse = (token: string) => ({
+  accessToken: token,
+  tokenType: 'Bearer',
+  expiresIn: 900,
+  user: { id: 'u1' },
+});
 
 describe('client HTTP', () => {
   const fetchMock = vi.fn<typeof fetch>();
@@ -19,7 +32,9 @@ describe('client HTTP', () => {
   });
 
   it('construit l’adresse avec les paramètres utiles et ignore les vides', () => {
-    expect(buildUrl('/venues', { city: 'Oran', q: '', page: undefined, n: 0, ok: false, none: null })).toBe('/api/v1/venues?city=Oran&n=0&ok=false');
+    expect(
+      buildUrl('/venues', { city: 'Oran', q: '', page: undefined, n: 0, ok: false, none: null }),
+    ).toBe('/api/v1/venues?city=Oran&n=0&ok=false');
     expect(buildUrl('/me')).toBe('/api/v1/me');
   });
 
@@ -29,7 +44,11 @@ describe('client HTTP', () => {
     await api('/bookings', { method: 'POST', body: { a: 1 }, idempotencyKey: 'key-1' });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/api/v1/bookings');
-    expect(init.headers).toMatchObject({ authorization: 'Bearer tok', 'content-type': 'application/json', 'idempotency-key': 'key-1' });
+    expect(init.headers).toMatchObject({
+      authorization: 'Bearer tok',
+      'content-type': 'application/json',
+      'idempotency-key': 'key-1',
+    });
     expect(init.body).toBe('{"a":1}');
     expect(init.credentials).toBe('include');
   });
@@ -38,7 +57,9 @@ describe('client HTTP', () => {
     setAccessToken('tok');
     fetchMock.mockResolvedValueOnce(json(200, []));
     await api('/venues', { auth: false });
-    expect((fetchMock.mock.calls[0]![1]!.headers as Record<string, string>)['authorization']).toBeUndefined();
+    expect(
+      (fetchMock.mock.calls[0]![1]!.headers as Record<string, string>)['authorization'],
+    ).toBeUndefined();
   });
 
   it('envoie une image telle quelle avec son type MIME', async () => {
@@ -58,7 +79,9 @@ describe('client HTTP', () => {
       .mockResolvedValueOnce(json(200, { items: [1] }));
     await expect(api('/bookings')).resolves.toEqual({ items: [1] });
     expect(fetchMock.mock.calls[1]![0]).toBe('/api/v1/auth/refresh');
-    expect((fetchMock.mock.calls[2]![1]!.headers as Record<string, string>)['authorization']).toBe('Bearer new');
+    expect((fetchMock.mock.calls[2]![1]!.headers as Record<string, string>)['authorization']).toBe(
+      'Bearer new',
+    );
     expect(getAccessToken()).toBe('new');
   });
 
@@ -71,8 +94,15 @@ describe('client HTTP', () => {
         refreshes += 1;
         return Promise.resolve(json(200, authResponse('new')));
       }
-      const headers = (fetchMock.mock.calls.at(-1)![1] as RequestInit).headers as Record<string, string>;
-      return Promise.resolve(headers['authorization'] === 'Bearer new' ? json(200, { ok: url }) : json(401, errorBody('TOKEN_EXPIRED')));
+      const headers = (fetchMock.mock.calls.at(-1)![1] as RequestInit).headers as Record<
+        string,
+        string
+      >;
+      return Promise.resolve(
+        headers['authorization'] === 'Bearer new'
+          ? json(200, { ok: url })
+          : json(401, errorBody('TOKEN_EXPIRED')),
+      );
     });
     const results = await Promise.all([api('/a'), api('/b'), api('/c')]);
     expect(results).toHaveLength(3);
@@ -83,7 +113,9 @@ describe('client HTTP', () => {
     setAccessToken('old');
     const lost = vi.fn();
     setSessionLostHandler(lost);
-    fetchMock.mockResolvedValueOnce(json(401, errorBody('TOKEN_EXPIRED'))).mockResolvedValueOnce(json(401, errorBody('TOKEN_INVALID')));
+    fetchMock
+      .mockResolvedValueOnce(json(401, errorBody('TOKEN_EXPIRED')))
+      .mockResolvedValueOnce(json(401, errorBody('TOKEN_INVALID')));
     await expect(api('/bookings')).rejects.toMatchObject({ code: 'TOKEN_EXPIRED' });
     expect(lost).toHaveBeenCalledOnce();
     expect(getAccessToken()).toBeNull();
@@ -91,16 +123,27 @@ describe('client HTTP', () => {
 
   it('ne tente pas de renouvellement sur un refus métier (403, 409…) ni sur de mauvais identifiants', async () => {
     fetchMock.mockResolvedValueOnce(json(401, errorBody('INVALID_CREDENTIALS')));
-    await expect(api('/auth/login', { method: 'POST', body: {}, auth: false })).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 401 });
+    await expect(
+      api('/auth/login', { method: 'POST', body: {}, auth: false }),
+    ).rejects.toMatchObject({ code: 'INVALID_CREDENTIALS', status: 401 });
     fetchMock.mockResolvedValueOnce(json(409, errorBody('SLOT_UNAVAILABLE')));
-    await expect(api('/bookings', { method: 'POST', body: {} })).rejects.toMatchObject({ code: 'SLOT_UNAVAILABLE', status: 409, requestId: 'req-1' });
+    await expect(api('/bookings', { method: 'POST', body: {} })).rejects.toMatchObject({
+      code: 'SLOT_UNAVAILABLE',
+      status: 409,
+      requestId: 'req-1',
+    });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('traduit une panne réseau et une réponse sans corps JSON en erreurs exploitables', async () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
-    await expect(api('/venues', { auth: false })).rejects.toMatchObject({ code: 'NETWORK', status: 0 });
-    fetchMock.mockResolvedValueOnce(new Response('<html>Bad Gateway</html>', { status: 502, statusText: 'Bad Gateway' }));
+    await expect(api('/venues', { auth: false })).rejects.toMatchObject({
+      code: 'NETWORK',
+      status: 0,
+    });
+    fetchMock.mockResolvedValueOnce(
+      new Response('<html>Bad Gateway</html>', { status: 502, statusText: 'Bad Gateway' }),
+    );
     const error = await api('/venues', { auth: false }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ code: 'UNKNOWN', status: 502 });

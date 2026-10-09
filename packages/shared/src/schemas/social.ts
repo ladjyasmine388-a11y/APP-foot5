@@ -144,9 +144,7 @@ export type CreateMatchRequestInput = z.infer<typeof createMatchRequestSchema>;
 // ───────────────────────── Matchs ─────────────────────────
 
 /** Match organisé par une équipe sur une de ses réservations (entraînement, match amical interne). */
-export const createTeamMatchSchema = z
-  .object({ teamId: z.uuid(), bookingId: z.uuid() })
-  .strict();
+export const createTeamMatchSchema = z.object({ teamId: z.uuid(), bookingId: z.uuid() }).strict();
 export type CreateTeamMatchInput = z.infer<typeof createTeamMatchSchema>;
 
 export const setScoreSchema = z
@@ -238,7 +236,13 @@ export interface MatchRequestView {
   id: string;
   listingId: string;
   status: 'REQUESTED' | 'ACCEPTED' | 'REJECTED' | 'CANCELLED';
-  team: { id: string; name: string; logoUrl: string | null; level: (typeof PLAYER_LEVELS)[number]; memberCount: number };
+  team: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    level: (typeof PLAYER_LEVELS)[number];
+    memberCount: number;
+  };
   message: string | null;
   createdAt: string;
 }
@@ -250,7 +254,13 @@ export interface OpponentListingView {
   endsAt: string;
   venue: SessionVenue;
   field: { id: string; name: string; capacity: number };
-  team: { id: string; name: string; logoUrl: string | null; level: (typeof PLAYER_LEVELS)[number]; memberCount: number };
+  team: {
+    id: string;
+    name: string;
+    logoUrl: string | null;
+    level: (typeof PLAYER_LEVELS)[number];
+    memberCount: number;
+  };
   playersPerSide: number;
   level: (typeof PLAYER_LEVELS)[number] | null;
   comment: string | null;

@@ -1,5 +1,10 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { ListNotificationsQuery, NotificationPage, NotificationType, NotificationView } from '@footfive/shared';
+import type {
+  ListNotificationsQuery,
+  NotificationPage,
+  NotificationType,
+  NotificationView,
+} from '@footfive/shared';
 import type { Prisma } from '../../generated/prisma/client.js';
 import { Errors } from '../../common/errors/app-exception.js';
 import { ENV } from '../../infra/config/config.module.js';
@@ -9,7 +14,11 @@ import { PrismaService } from '../../infra/database/prisma.service.js';
 import { Mailer } from '../../infra/mail/mailer.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { decodeOffset, encodeOffset } from '../teams/teams.service.js';
-import { EMAIL_NOTIFICATION_TYPES, type NotificationData, renderNotification } from './notification-content.js';
+import {
+  EMAIL_NOTIFICATION_TYPES,
+  type NotificationData,
+  renderNotification,
+} from './notification-content.js';
 
 /** Notifications lues depuis plus de 90 jours, toutes celles de plus d'un an : supprimées. */
 const READ_RETENTION_DAYS = 90;
@@ -34,36 +43,64 @@ export class NotificationsService {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, status: true, email: true, emailVerifiedAt: true, locale: true, preferences: true },
+        select: {
+          id: true,
+          status: true,
+          email: true,
+          emailVerifiedAt: true,
+          locale: true,
+          preferences: true,
+        },
       });
       if (!user || user.status !== 'ACTIVE') return;
 
       try {
-        await this.prisma.notification.create({ data: { userId, type, payload: data as Prisma.InputJsonValue } });
+        await this.prisma.notification.create({
+          data: { userId, type, payload: data as Prisma.InputJsonValue },
+        });
       } catch (error) {
         if (isPgError(error, PG_ERROR.UNIQUE_VIOLATION)) return; // rappel déjà envoyé à ce joueur pour ce match
         throw error;
       }
 
-      const optedOut = (user.preferences as Record<string, unknown> | null)?.emailNotifications === false;
+      const optedOut =
+        (user.preferences as Record<string, unknown> | null)?.emailNotifications === false;
       if (EMAIL_NOTIFICATION_TYPES.has(type) && user.emailVerifiedAt && !optedOut) {
         const { title, body } = renderNotification(type, data, user.locale);
         void this.mailer
-          .send({ to: user.email, subject: `${title} — Foot Five`, text: `${body}\n\n${this.env.WEB_ORIGIN}/notifications` })
-          .catch((error: unknown) => this.logger.warn(`Email « ${type} » non envoyé : ${error instanceof Error ? error.message : String(error)}`));
+          .send({
+            to: user.email,
+            subject: `${title} — Foot Five`,
+            text: `${body}\n\n${this.env.WEB_ORIGIN}/notifications`,
+          })
+          .catch((error: unknown) =>
+            this.logger.warn(
+              `Email « ${type} » non envoyé : ${error instanceof Error ? error.message : String(error)}`,
+            ),
+          );
       }
     } catch (error) {
-      this.logger.error(`Notification « ${type} » en échec pour ${userId}`, error instanceof Error ? error.stack : String(error));
+      this.logger.error(
+        `Notification « ${type} » en échec pour ${userId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
   }
 
-  async notifyMany(userIds: Iterable<string>, type: NotificationType, data: NotificationData): Promise<void> {
+  async notifyMany(
+    userIds: Iterable<string>,
+    type: NotificationType,
+    data: NotificationData,
+  ): Promise<void> {
     for (const userId of new Set(userIds)) await this.notify(userId, type, data);
   }
 
   async list(user: AuthUser, query: ListNotificationsQuery): Promise<NotificationPage> {
     const offset = decodeOffset(query.cursor);
-    const where: Prisma.NotificationWhereInput = { userId: user.id, ...(query.unread ? { readAt: null } : {}) };
+    const where: Prisma.NotificationWhereInput = {
+      userId: user.id,
+      ...(query.unread ? { readAt: null } : {}),
+    };
     const [me, rows, unreadCount] = await Promise.all([
       this.prisma.user.findUniqueOrThrow({ where: { id: user.id }, select: { locale: true } }),
       this.prisma.notification.findMany({
@@ -89,11 +126,17 @@ export class NotificationsService {
   async markRead(user: AuthUser, id: string, now: Date = new Date()): Promise<void> {
     const owned = await this.prisma.notification.count({ where: { id, userId: user.id } });
     if (owned === 0) throw Errors.notFound('Notification introuvable');
-    await this.prisma.notification.updateMany({ where: { id, userId: user.id, readAt: null }, data: { readAt: now } });
+    await this.prisma.notification.updateMany({
+      where: { id, userId: user.id, readAt: null },
+      data: { readAt: now },
+    });
   }
 
   async markAllRead(user: AuthUser, now: Date = new Date()): Promise<number> {
-    const result = await this.prisma.notification.updateMany({ where: { userId: user.id, readAt: null }, data: { readAt: now } });
+    const result = await this.prisma.notification.updateMany({
+      where: { userId: user.id, readAt: null },
+      data: { readAt: now },
+    });
     return result.count;
   }
 
@@ -110,9 +153,26 @@ export class NotificationsService {
     return result.count;
   }
 
-  private toView(row: { id: string; type: NotificationType; payload: Prisma.JsonValue; readAt: Date | null; createdAt: Date }, locale: string): NotificationView {
+  private toView(
+    row: {
+      id: string;
+      type: NotificationType;
+      payload: Prisma.JsonValue;
+      readAt: Date | null;
+      createdAt: Date;
+    },
+    locale: string,
+  ): NotificationView {
     const data = (row.payload ?? {}) as NotificationData;
     const { title, body } = renderNotification(row.type, data, locale);
-    return { id: row.id, type: row.type, title, body, data, read: row.readAt !== null, createdAt: row.createdAt.toISOString() };
+    return {
+      id: row.id,
+      type: row.type,
+      title,
+      body,
+      data,
+      read: row.readAt !== null,
+      createdAt: row.createdAt.toISOString(),
+    };
   }
 }

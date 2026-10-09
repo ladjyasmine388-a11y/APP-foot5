@@ -14,13 +14,13 @@
 
 ## Équipes
 
-| Règle | Détail |
-|---|---|
-| Création | email vérifié ; 3 équipes dirigées au maximum (`TEAM_LIMIT_REACHED`) ; nom unique, insensible à la casse (index SQL) |
-| Capitaine | un seul par équipe (index partiel) ; transfert possible ; un capitaine avec coéquipiers doit transférer avant de partir ; seul, il dissout l'équipe en partant |
-| Effectif | 25 membres maximum ; l'effectif n'est visible que des membres ; jamais d'email/téléphone/date de naissance |
+| Règle       | Détail                                                                                                                                                                                                                                                              |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Création    | email vérifié ; 3 équipes dirigées au maximum (`TEAM_LIMIT_REACHED`) ; nom unique, insensible à la casse (index SQL)                                                                                                                                                |
+| Capitaine   | un seul par équipe (index partiel) ; transfert possible ; un capitaine avec coéquipiers doit transférer avant de partir ; seul, il dissout l'équipe en partant                                                                                                      |
+| Effectif    | 25 membres maximum ; l'effectif n'est visible que des membres ; jamais d'email/téléphone/date de naissance                                                                                                                                                          |
 | Invitations | par compte ou par email, valables 7 jours, 30 en attente maximum, 30 envois/jour ; un email inconnu reçoit un message ; une invitation par email n'est acceptable qu'avec **cette adresse vérifiée** ; acceptation atomique (usage unique, `TEAM_FULL` si complète) |
-| Dissolution | refusée tant qu'une annonce ouverte ou un match à venir existe ; le nom redevient disponible |
+| Dissolution | refusée tant qu'une annonce ouverte ou un match à venir existe ; le nom redevient disponible                                                                                                                                                                        |
 
 ## Sessions « Complétez votre équipe »
 

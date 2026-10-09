@@ -70,9 +70,13 @@ export async function configureApp(app: NestFastifyApplication, env: Env): Promi
   const fastify = app.getHttpAdapter().getInstance();
 
   // Envoi d'images : le corps binaire est lu tel quel, avec SA propre limite (le plafond JSON de 100 Ko ne s'applique pas).
-  fastify.addContentTypeParser([...UPLOAD_CONTENT_TYPES], { parseAs: 'buffer', bodyLimit: UPLOAD_MAX_BYTES }, (_request, body, done) => {
-    done(null, body);
-  });
+  fastify.addContentTypeParser(
+    [...UPLOAD_CONTENT_TYPES],
+    { parseAs: 'buffer', bodyLimit: UPLOAD_MAX_BYTES },
+    (_request, body, done) => {
+      done(null, body);
+    },
+  );
 
   fastify.addHook('onSend', async (request, reply) => {
     reply.header(REQUEST_ID_HEADER, request.id);

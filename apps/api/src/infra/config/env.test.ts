@@ -72,7 +72,10 @@ describe('loadEnv', () => {
     it('INTERDIT un serveur SMTP local, et des identifiants SMTP incomplets, en production', () => {
       expect(() => loadEnv({ ...validProd, SMTP_HOST: 'localhost' })).toThrow(/SMTP_HOST/);
       expect(() => loadEnv({ ...validProd, SMTP_USER: 'mailer' })).toThrow(/SMTP_PASSWORD/);
-      expect(loadEnv({ ...validProd, SMTP_USER: 'mailer', SMTP_PASSWORD: 'secret', SMTP_SECURE: 'true' }).SMTP_SECURE).toBe(true);
+      expect(
+        loadEnv({ ...validProd, SMTP_USER: 'mailer', SMTP_PASSWORD: 'secret', SMTP_SECURE: 'true' })
+          .SMTP_SECURE,
+      ).toBe(true);
     });
 
     it('INTERDIT les secrets de développement en production', () => {

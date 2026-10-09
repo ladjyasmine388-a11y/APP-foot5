@@ -8,7 +8,9 @@ export default defineConfig({
   server: {
     port: 5173,
     // Le web et le futur mobile consomment la MÊME API : en dev, on la proxifie pour éviter le CORS.
-    proxy: { '/api': { target: 'http://localhost:3000', changeOrigin: true } },
+    proxy: {
+      '/api': { target: process.env['API_URL'] ?? 'http://localhost:3000', changeOrigin: true },
+    },
   },
   build: { sourcemap: true },
   test: {

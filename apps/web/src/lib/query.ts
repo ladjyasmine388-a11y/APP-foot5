@@ -8,7 +8,9 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: 30_000,
         refetchOnWindowFocus: false,
-        retry: (failureCount, error) => !(error instanceof ApiError && error.status >= 400 && error.status < 500) && failureCount < 2,
+        retry: (failureCount, error) =>
+          !(error instanceof ApiError && error.status >= 400 && error.status < 500) &&
+          failureCount < 2,
       },
     },
   });
@@ -16,6 +18,7 @@ export function createQueryClient(): QueryClient {
 
 /** Paramètre `next` de connexion : uniquement un chemin interne (jamais une adresse externe → pas de redirection ouverte). */
 export function safeNext(value: string | null | undefined): string {
-  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\')) return '/';
+  if (!value || !value.startsWith('/') || value.startsWith('//') || value.includes('\\'))
+    return '/';
   return value;
 }

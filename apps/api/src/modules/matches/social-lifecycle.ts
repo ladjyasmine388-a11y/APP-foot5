@@ -57,14 +57,24 @@ export async function cancelSoloSessionTx(tx: Tx, sessionId: string): Promise<Li
     select: { id: true },
   });
   if (claimed.length === 0) return out;
-  await tx.match.updateMany({ where: { soloSessionId: sessionId, status: 'SCHEDULED' }, data: { status: 'CANCELLED' } });
-  const players = await tx.soloPlayer.findMany({ where: { sessionId, status: 'JOINED' }, select: { userId: true } });
+  await tx.match.updateMany({
+    where: { soloSessionId: sessionId, status: 'SCHEDULED' },
+    data: { status: 'CANCELLED' },
+  });
+  const players = await tx.soloPlayer.findMany({
+    where: { sessionId, status: 'JOINED' },
+    select: { userId: true },
+  });
   out.solo.push({ sessionId, playerIds: players.map((p) => p.userId) });
   return out;
 }
 
 /** Rejette les demandes en attente d'une annonce. */
-export async function rejectPendingRequestsTx(tx: Tx, listingId: string, now: Date): Promise<RequestRejected[]> {
+export async function rejectPendingRequestsTx(
+  tx: Tx,
+  listingId: string,
+  now: Date,
+): Promise<RequestRejected[]> {
   const rows = await tx.matchRequest.updateManyAndReturn({
     where: { listingId, status: 'REQUESTED' },
     data: { status: 'REJECTED', respondedAt: now },
@@ -74,7 +84,11 @@ export async function rejectPendingRequestsTx(tx: Tx, listingId: string, now: Da
 }
 
 /** Annule une annonce adversaire : demandes en attente rejetées, demande acceptée annulée, match annulé. */
-export async function cancelListingTx(tx: Tx, listingId: string, now: Date): Promise<LifecycleOutcome> {
+export async function cancelListingTx(
+  tx: Tx,
+  listingId: string,
+  now: Date,
+): Promise<LifecycleOutcome> {
   const out = emptyOutcome();
   const claimed = await tx.opponentListing.updateManyAndReturn({
     where: { id: listingId, status: { in: ['OPEN', 'ACCEPTED'] } },
@@ -83,8 +97,14 @@ export async function cancelListingTx(tx: Tx, listingId: string, now: Date): Pro
   });
   if (claimed.length === 0) return out;
   out.rejected.push(...(await rejectPendingRequestsTx(tx, listingId, now)));
-  await tx.matchRequest.updateMany({ where: { listingId, status: 'ACCEPTED' }, data: { status: 'CANCELLED', respondedAt: now } });
-  const match = await tx.match.findFirst({ where: { opponentListingId: listingId, status: 'SCHEDULED' }, select: { id: true } });
+  await tx.matchRequest.updateMany({
+    where: { listingId, status: 'ACCEPTED' },
+    data: { status: 'CANCELLED', respondedAt: now },
+  });
+  const match = await tx.match.findFirst({
+    where: { opponentListingId: listingId, status: 'SCHEDULED' },
+    select: { id: true },
+  });
   if (match) {
     await tx.match.update({ where: { id: match.id }, data: { status: 'CANCELLED' } });
     out.matches.push({ matchId: match.id, participantIds: await participantIdsOf(tx, match.id) });
@@ -100,7 +120,8 @@ export async function cancelMatchTx(tx: Tx, matchId: string): Promise<LifecycleO
     data: { status: 'CANCELLED' },
     select: { id: true },
   });
-  if (claimed.length > 0) out.matches.push({ matchId, participantIds: await participantIdsOf(tx, matchId) });
+  if (claimed.length > 0)
+    out.matches.push({ matchId, participantIds: await participantIdsOf(tx, matchId) });
   return out;
 }
 
@@ -108,7 +129,11 @@ export async function cancelMatchTx(tx: Tx, matchId: string): Promise<LifecycleO
  * La réservation support n'existe plus (annulée, expirée, no-show) : tout ce qui reposait dessus s'arrête.
  * Appelé par l'événement `booking.cancelled` ET par le balayage périodique (filet de sécurité si l'événement est perdu).
  */
-export async function cascadeBookingTx(tx: Tx, bookingId: string, now: Date): Promise<LifecycleOutcome> {
+export async function cascadeBookingTx(
+  tx: Tx,
+  bookingId: string,
+  now: Date,
+): Promise<LifecycleOutcome> {
   const out = emptyOutcome();
   const [solo, listing, match] = await Promise.all([
     tx.soloSession.findUnique({ where: { bookingId }, select: { id: true } }),
@@ -154,7 +179,10 @@ export async function completeMatchTx(tx: Tx, matchId: string): Promise<boolean>
     });
   }
   if (match.opponentListingId) {
-    await tx.opponentListing.updateMany({ where: { id: match.opponentListingId, status: 'ACCEPTED' }, data: { status: 'COMPLETED' } });
+    await tx.opponentListing.updateMany({
+      where: { id: match.opponentListingId, status: 'ACCEPTED' },
+      data: { status: 'COMPLETED' },
+    });
   }
   return true;
 }

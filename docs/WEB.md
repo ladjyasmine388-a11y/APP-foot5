@@ -18,13 +18,13 @@ Le paiement est **simulé** (`PAYMENT_PROVIDER=fake`) : la page de paiement port
 
 ## Pages
 
-| Zone | Routes |
-|---|---|
-| Public | `/` accueil + recherche · `/venues` · `/venues/:slug` (disponibilités, avis) · `/solo` · `/solo/:id` · `/opponents` · `/opponents/:id` |
-| Compte | `/login` · `/register` · `/verify-email` · `/forgot-password` · `/reset-password` |
-| Joueur | `/book/:fieldId` · `/bookings` · `/bookings/:id` · `/bookings/:id/payment` (retour de paiement) · `/teams` · `/teams/:id` · `/solo/new` · `/opponents/new` · `/matches` · `/matches/:id` · `/matches/new` · `/notifications` · `/profile` |
-| Complexe | `/manage` · `/manage/venues/new` · `/manage/venues/:id/{bookings,fields,hours,info,staff,stats}` |
-| Administration | `/admin` (tableau de bord) · `venues` · `users` · `commission` · `settings` · `refunds` · `reviews` · `audit` |
+| Zone           | Routes                                                                                                                                                                                                                                    |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public         | `/` accueil + recherche · `/venues` · `/venues/:slug` (disponibilités, avis) · `/solo` · `/solo/:id` · `/opponents` · `/opponents/:id`                                                                                                    |
+| Compte         | `/login` · `/register` · `/verify-email` · `/forgot-password` · `/reset-password`                                                                                                                                                         |
+| Joueur         | `/book/:fieldId` · `/bookings` · `/bookings/:id` · `/bookings/:id/payment` (retour de paiement) · `/teams` · `/teams/:id` · `/solo/new` · `/opponents/new` · `/matches` · `/matches/:id` · `/matches/new` · `/notifications` · `/profile` |
+| Complexe       | `/manage` · `/manage/venues/new` · `/manage/venues/:id/{bookings,fields,hours,info,staff,stats}`                                                                                                                                          |
+| Administration | `/admin` (tableau de bord) · `venues` · `users` · `commission` · `settings` · `refunds` · `reviews` · `audit`                                                                                                                             |
 
 Les espaces **complexe** et **administration** sont chargés à la demande, comme chaque page (premier affichage ≈ 77 Ko compressés).
 

@@ -27,7 +27,9 @@ export class ReviewsController {
 
   @Post('bookings/:bookingId/review')
   @RateLimit({ name: 'review-create', limit: 20, windowSeconds: 24 * 3600, by: 'user' })
-  @ApiOperation({ summary: 'Donner mon avis sur une réservation jouée (un seul avis, dans les 30 jours)' })
+  @ApiOperation({
+    summary: 'Donner mon avis sur une réservation jouée (un seul avis, dans les 30 jours)',
+  })
   @ApiZodBody(createReviewSchema)
   create(
     @CurrentUser() user: AuthUser,
@@ -40,7 +42,10 @@ export class ReviewsController {
 
   @Get('bookings/:bookingId/review')
   @ApiOperation({ summary: 'Mon avis sur cette réservation (404 s’il n’y en a pas)' })
-  mine(@CurrentUser() user: AuthUser, @Param('bookingId', uuid) bookingId: string): Promise<ReviewView> {
+  mine(
+    @CurrentUser() user: AuthUser,
+    @Param('bookingId', uuid) bookingId: string,
+  ): Promise<ReviewView> {
     return this.reviews.getMine(user, bookingId);
   }
 

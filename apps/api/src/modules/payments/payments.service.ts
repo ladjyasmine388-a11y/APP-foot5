@@ -516,7 +516,10 @@ export class PaymentsService implements OnModuleInit {
             tx,
           );
         });
-        await this.events.emit('refund.processed', { refundId: refund.id, bookingId: refund.bookingId });
+        await this.events.emit('refund.processed', {
+          refundId: refund.id,
+          bookingId: refund.bookingId,
+        });
       } else if (outcome.status === 'PENDING') {
         await this.prisma.refund.update({
           where: { id: refund.id },

@@ -56,7 +56,9 @@ export class MatchesController {
   }
 
   @Put('matches/:matchId/score')
-  @ApiOperation({ summary: 'Saisir le score une fois le match terminé (capitaine ; écriture unique)' })
+  @ApiOperation({
+    summary: 'Saisir le score une fois le match terminé (capitaine ; écriture unique)',
+  })
   @ApiZodBody(setScoreSchema)
   score(
     @CurrentUser() user: AuthUser,
@@ -69,8 +71,14 @@ export class MatchesController {
 
   @Post('matches/:matchId/cancel')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Annuler un match à venir (ou se retirer d’un face-à-face) — capitaine' })
-  async cancel(@CurrentUser() user: AuthUser, @Param('matchId', uuid) matchId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  @ApiOperation({
+    summary: 'Annuler un match à venir (ou se retirer d’un face-à-face) — capitaine',
+  })
+  async cancel(
+    @CurrentUser() user: AuthUser,
+    @Param('matchId', uuid) matchId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.matches.cancel(user, matchId, ctx);
   }
 }

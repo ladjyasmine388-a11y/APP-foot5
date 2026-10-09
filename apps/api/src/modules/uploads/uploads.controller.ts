@@ -1,4 +1,16 @@
-import { Body, Controller, Delete, Get, Headers, HttpCode, Param, Post, Put, Res, StreamableFile } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  Post,
+  Put,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { type UploadedImage, UPLOAD_CONTENT_TYPES } from '@footfive/shared';
 import type { FastifyReply } from 'fastify';
@@ -14,7 +26,10 @@ import { UploadsService } from './uploads.service.js';
 const uuid = new ZodValidationPipe(z.uuid());
 const fileKey = new ZodValidationPipe(z.string().regex(STORAGE_KEY));
 const uploadRate = { name: 'upload', limit: 30, windowSeconds: 3600, by: 'user' } as const;
-const imageBody = { description: 'Image JPEG, PNG ou WebP (2 Mo maximum), envoyée telle quelle dans le corps', schema: { type: 'string', format: 'binary' } } as const;
+const imageBody = {
+  description: 'Image JPEG, PNG ou WebP (2 Mo maximum), envoyée telle quelle dans le corps',
+  schema: { type: 'string', format: 'binary' },
+} as const;
 
 @ApiTags('Images')
 @ApiBearerAuth()
@@ -27,7 +42,10 @@ export class UploadsController {
   @Public()
   @RateLimit({ name: 'public-browse', limit: 300, windowSeconds: 60, by: 'ip' })
   @ApiOperation({ summary: 'Image envoyée (avatar, logo d’équipe, photo de complexe)' })
-  async read(@Param('key', fileKey) key: string, @Res({ passthrough: true }) reply: FastifyReply): Promise<StreamableFile> {
+  async read(
+    @Param('key', fileKey) key: string,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
     const file = await this.uploads.read(key);
     reply.header('Cache-Control', 'public, max-age=31536000, immutable');
     reply.header('X-Content-Type-Options', 'nosniff');
@@ -41,7 +59,11 @@ export class UploadsController {
   @ApiOperation({ summary: 'Définir ma photo de profil' })
   @ApiConsumes(...UPLOAD_CONTENT_TYPES)
   @ApiBody(imageBody)
-  setAvatar(@CurrentUser() user: AuthUser, @Body() body: unknown, @Headers('content-type') contentType: string | undefined): Promise<UploadedImage> {
+  setAvatar(
+    @CurrentUser() user: AuthUser,
+    @Body() body: unknown,
+    @Headers('content-type') contentType: string | undefined,
+  ): Promise<UploadedImage> {
     return this.uploads.setAvatar(user, body, contentType);
   }
 
@@ -70,7 +92,10 @@ export class UploadsController {
   @Delete('teams/:teamId/logo')
   @HttpCode(204)
   @ApiOperation({ summary: 'Supprimer le logo de mon équipe (capitaine)' })
-  async removeLogo(@CurrentUser() user: AuthUser, @Param('teamId', uuid) teamId: string): Promise<void> {
+  async removeLogo(
+    @CurrentUser() user: AuthUser,
+    @Param('teamId', uuid) teamId: string,
+  ): Promise<void> {
     await this.uploads.removeTeamLogo(user, teamId);
   }
 

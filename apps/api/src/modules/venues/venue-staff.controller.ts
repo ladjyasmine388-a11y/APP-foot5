@@ -1,6 +1,12 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { type AddStaffInput, type StaffMemberView, type UpdateStaffInput, addStaffSchema, updateStaffSchema } from '@footfive/shared';
+import {
+  type AddStaffInput,
+  type StaffMemberView,
+  type UpdateStaffInput,
+  addStaffSchema,
+  updateStaffSchema,
+} from '@footfive/shared';
 import { z } from 'zod';
 import { type RequestContext, ReqCtx } from '../../common/http/request-context.js';
 import { ApiZodBody } from '../../common/zod/api-zod.js';
@@ -20,13 +26,19 @@ export class VenueStaffController {
 
   @Get()
   @ApiOperation({ summary: 'Personnel du complexe (gérant)' })
-  list(@CurrentUser() user: AuthUser, @Param('venueId', uuid) venueId: string): Promise<StaffMemberView[]> {
+  list(
+    @CurrentUser() user: AuthUser,
+    @Param('venueId', uuid) venueId: string,
+  ): Promise<StaffMemberView[]> {
     return this.staff.list(user, venueId);
   }
 
   @Post()
   @RateLimit({ name: 'staff-add', limit: 20, windowSeconds: 3600, by: 'user' })
-  @ApiOperation({ summary: 'Ajouter un membre du personnel par son adresse email (propriétaire ; le compte doit exister)' })
+  @ApiOperation({
+    summary:
+      'Ajouter un membre du personnel par son adresse email (propriétaire ; le compte doit exister)',
+  })
   @ApiZodBody(addStaffSchema)
   add(
     @CurrentUser() user: AuthUser,
@@ -38,7 +50,9 @@ export class VenueStaffController {
   }
 
   @Patch(':userId')
-  @ApiOperation({ summary: 'Changer le rôle d’un membre (propriétaire ; il reste toujours un propriétaire)' })
+  @ApiOperation({
+    summary: 'Changer le rôle d’un membre (propriétaire ; il reste toujours un propriétaire)',
+  })
   @ApiZodBody(updateStaffSchema)
   updateRole(
     @CurrentUser() user: AuthUser,

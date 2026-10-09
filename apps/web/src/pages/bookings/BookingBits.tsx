@@ -25,13 +25,19 @@ export function BookingCard({ booking }: { booking: BookingView }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <p className="font-semibold">{booking.venue.name}</p>
-            <p className="text-sm text-muted">{booking.field.name} · {booking.venue.city}</p>
+            <p className="text-sm text-muted">
+              {booking.field.name} · {booking.venue.city}
+            </p>
           </div>
           <BookingStatusBadge status={booking.status} />
         </div>
-        <p className="num mt-2 text-sm">{dateTime(booking.startsAt)} – {time(booking.endsAt)}</p>
+        <p className="num mt-2 text-sm">
+          {dateTime(booking.startsAt)} – {time(booking.endsAt)}
+        </p>
         <div className="mt-2 flex justify-between text-sm text-muted">
-          <span className="num">{t('booking.reference')} : {booking.reference}</span>
+          <span className="num">
+            {t('booking.reference')} : {booking.reference}
+          </span>
           <span className="num font-medium text-ink">{money(booking.totalMinor)}</span>
         </div>
       </Card>

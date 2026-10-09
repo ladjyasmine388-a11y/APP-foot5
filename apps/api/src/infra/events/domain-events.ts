@@ -39,7 +39,12 @@ export interface DomainEventMap {
 
   // Matchs
   /** `venueName` / `startsAt` sont fournis quand le match a été supprimé (retrait de l'adversaire) et ne peut plus être relu. */
-  'match.cancelled': { matchId: string; participantIds: string[]; venueName?: string; startsAt?: string };
+  'match.cancelled': {
+    matchId: string;
+    participantIds: string[];
+    venueName?: string;
+    startsAt?: string;
+  };
 }
 
 export type DomainEventName = keyof DomainEventMap;

@@ -13,7 +13,12 @@ const reason = z.string().trim().min(3).max(500);
 // ───────────────────────── Complexes ─────────────────────────
 
 export const adminListVenuesQuerySchema = z
-  .object({ status: z.enum(VENUE_STATUSES).optional(), q: z.string().trim().min(1).max(80).optional(), city: citySchema.optional(), ...page })
+  .object({
+    status: z.enum(VENUE_STATUSES).optional(),
+    q: z.string().trim().min(1).max(80).optional(),
+    city: citySchema.optional(),
+    ...page,
+  })
   .strict();
 export type AdminListVenuesQuery = z.infer<typeof adminListVenuesQuerySchema>;
 
@@ -25,7 +30,9 @@ export type VenueApprovalInput = z.infer<typeof venueApprovalSchema>;
 export type VenueRejectionInput = z.infer<typeof venueRejectionSchema>;
 
 /** `null` : retour à la règle par défaut de la plateforme. */
-export const setVenueDepositPolicySchema = z.object({ depositPolicy: depositPolicySchema.nullable() }).strict();
+export const setVenueDepositPolicySchema = z
+  .object({ depositPolicy: depositPolicySchema.nullable() })
+  .strict();
 export type SetVenueDepositPolicyInput = z.infer<typeof setVenueDepositPolicySchema>;
 
 // ───────────────────────── Utilisateurs ─────────────────────────
@@ -75,7 +82,12 @@ export const updateSettingSchema = z.object({ value: z.unknown() }).strict();
 // ───────────────────────── Remboursements, avis ─────────────────────────
 
 export const adminListRefundsQuerySchema = z
-  .object({ status: z.enum(['REQUESTED', 'APPROVED', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'REJECTED']).optional(), ...page })
+  .object({
+    status: z
+      .enum(['REQUESTED', 'APPROVED', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'REJECTED'])
+      .optional(),
+    ...page,
+  })
   .strict();
 export type AdminListRefundsQuery = z.infer<typeof adminListRefundsQuerySchema>;
 
@@ -97,7 +109,10 @@ export const statsQuerySchema = z
   .object({ from: dateSchema, to: dateSchema })
   .strict()
   .refine((v) => v.from <= v.to, { path: ['to'], message: 'La fin doit suivre le début' })
-  .refine((v) => (Date.parse(v.to) - Date.parse(v.from)) / 86_400_000 <= 366, { path: ['to'], message: 'Période de 366 jours au maximum' });
+  .refine((v) => (Date.parse(v.to) - Date.parse(v.from)) / 86_400_000 <= 366, {
+    path: ['to'],
+    message: 'Période de 366 jours au maximum',
+  });
 export type StatsQuery = z.infer<typeof statsQuerySchema>;
 
 export const auditQuerySchema = z
@@ -115,7 +130,9 @@ export type AuditQuery = z.infer<typeof auditQuerySchema>;
 
 // ───────────────────────── Personnel d'un complexe ─────────────────────────
 
-export const addStaffSchema = z.object({ email: emailSchema, role: z.enum(VENUE_STAFF_ROLES).default('STAFF') }).strict();
+export const addStaffSchema = z
+  .object({ email: emailSchema, role: z.enum(VENUE_STAFF_ROLES).default('STAFF') })
+  .strict();
 export type AddStaffInput = z.infer<typeof addStaffSchema>;
 export const updateStaffSchema = z.object({ role: z.enum(VENUE_STAFF_ROLES) }).strict();
 export type UpdateStaffInput = z.infer<typeof updateStaffSchema>;
@@ -211,7 +228,13 @@ export interface DailyPoint {
 export interface VenueStats {
   from: string;
   to: string;
-  bookings: { total: number; confirmed: number; completed: number; cancelled: number; noShow: number };
+  bookings: {
+    total: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+    noShow: number;
+  };
   /** Heures réellement réservées (créneaux confirmés ou joués). */
   bookedHours: number;
   /** Prix des terrains réservés (hors réservations annulées). */
@@ -233,7 +256,14 @@ export interface AdminStats {
   to: string;
   users: { total: number; newInPeriod: number; blocked: number };
   venues: { total: number; pending: number; approved: number; suspended: number; rejected: number };
-  bookings: { total: number; confirmed: number; completed: number; cancelled: number; expired: number; noShow: number };
+  bookings: {
+    total: number;
+    confirmed: number;
+    completed: number;
+    cancelled: number;
+    expired: number;
+    noShow: number;
+  };
   grossMinor: number;
   commissionMinor: number;
   refundedMinor: number;

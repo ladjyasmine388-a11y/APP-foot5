@@ -61,6 +61,7 @@ export class FakeProviderDevController {
   constructor(
     @Inject(FakePaymentProvider) private readonly fake: FakePaymentProvider,
     private readonly webhooks: PaymentWebhooksService,
+    @Inject(ENV) private readonly env: Env,
   ) {}
 
   @Get('checkout/:ref')
@@ -75,7 +76,14 @@ export class FakeProviderDevController {
         ? `${form('pay', 'Payer', 'primary')}${form('fail', 'Simuler un échec', 'secondary')}${form('cancel', 'Annuler', 'secondary')}`
         : `<p class="state">Ce paiement est déjà « ${escapeHtml(data.status)} ».</p>`;
 
-    void reply.type('text/html; charset=utf-8')
+    // La politique de sécurité par défaut (helmet) interdit qu'un formulaire redirige vers une autre origine ; or cette page doit
+    // renvoyer le payeur vers le site (comme le fait toute vraie page de paiement). On autorise donc uniquement l'origine du site.
+    void reply
+      .header(
+        'content-security-policy',
+        `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${this.env.WEB_ORIGIN}; frame-ancestors 'none'; base-uri 'none'`,
+      )
+      .type('text/html; charset=utf-8')
       .send(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Paiement simulé — Foot Five</title>
 <style>body{font-family:system-ui,sans-serif;background:#0b5d3b;margin:0;min-height:100vh;display:grid;place-items:center}

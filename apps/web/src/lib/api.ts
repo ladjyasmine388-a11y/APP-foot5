@@ -4,7 +4,8 @@ import type { ApiErrorBody, AuthResponse, ErrorCode } from '@footfive/shared';
  * Client HTTP unique de l'application. Le jeton d'accès reste EN MÉMOIRE (jamais dans localStorage : un script
  * injecté ne peut pas le lire) ; la session est renouvelée par le cookie de rafraîchissement httpOnly.
  */
-const BASE = (import.meta.env['VITE_API_URL'] as string | undefined)?.replace(/\/+$/, '') ?? '/api/v1';
+const BASE =
+  (import.meta.env['VITE_API_URL'] as string | undefined)?.replace(/\/+$/, '') ?? '/api/v1';
 
 export class ApiError extends Error {
   constructor(
@@ -63,14 +64,25 @@ async function toError(res: Response): Promise<ApiError> {
     /* réponse sans corps JSON */
   }
   const err = body?.error;
-  return new ApiError(res.status, err?.code ?? 'UNKNOWN', err?.message ?? res.statusText, err?.details, err?.requestId);
+  return new ApiError(
+    res.status,
+    err?.code ?? 'UNKNOWN',
+    err?.message ?? res.statusText,
+    err?.details,
+    err?.requestId,
+  );
 }
 
 /** Renouvelle la session via le cookie httpOnly. Une seule requête de renouvellement à la fois, partagée. */
 export function refreshSession(): Promise<AuthResponse | null> {
   refreshInFlight ??= (async () => {
     try {
-      const res = await fetch(`${BASE}/auth/refresh`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: '{}' });
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'content-type': 'application/json' },
+        body: '{}',
+      });
       if (!res.ok) {
         accessToken = null;
         return null;
@@ -87,7 +99,11 @@ export function refreshSession(): Promise<AuthResponse | null> {
   return refreshInFlight;
 }
 
-const RENEWABLE: ReadonlySet<string> = new Set(['TOKEN_EXPIRED', 'TOKEN_INVALID', 'UNAUTHENTICATED']);
+const RENEWABLE: ReadonlySet<string> = new Set([
+  'TOKEN_EXPIRED',
+  'TOKEN_INVALID',
+  'UNAUTHENTICATED',
+]);
 
 async function send(path: string, opts: RequestOptions): Promise<Response> {
   const headers: Record<string, string> = {};
@@ -102,7 +118,13 @@ async function send(path: string, opts: RequestOptions): Promise<Response> {
   if (opts.idempotencyKey) headers['idempotency-key'] = opts.idempotencyKey;
   if (opts.auth !== false && accessToken) headers['authorization'] = `Bearer ${accessToken}`;
   try {
-    return await fetch(buildUrl(path, opts.query), { method: opts.method ?? 'GET', headers, body, credentials: 'include', signal: opts.signal });
+    return await fetch(buildUrl(path, opts.query), {
+      method: opts.method ?? 'GET',
+      headers,
+      body,
+      credentials: 'include',
+      signal: opts.signal,
+    });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
     throw new ApiError(0, 'NETWORK', 'Réseau indisponible');

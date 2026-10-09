@@ -9,5 +9,13 @@ import { venues } from './venues';
 /** Un fichier par domaine ; un test vérifie qu'aucune clé n'existe dans deux fichiers à la fois. */
 export const messageSources = [common, auth, venues, bookings, social, manage, admin] as const;
 
-export const messages = { ...common, ...auth, ...venues, ...bookings, ...social, ...manage, ...admin };
+export const messages = {
+  ...common,
+  ...auth,
+  ...venues,
+  ...bookings,
+  ...social,
+  ...manage,
+  ...admin,
+};
 export type MessageKey = keyof typeof messages;

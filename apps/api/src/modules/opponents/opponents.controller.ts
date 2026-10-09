@@ -16,7 +16,12 @@ import { z } from 'zod';
 import { type RequestContext, ReqCtx } from '../../common/http/request-context.js';
 import { ApiZodBody } from '../../common/zod/api-zod.js';
 import { ZodValidationPipe } from '../../common/zod/zod-validation.pipe.js';
-import { CurrentUser, OptionalUser, Public, RequireVerifiedEmail } from '../auth/auth.decorators.js';
+import {
+  CurrentUser,
+  OptionalUser,
+  Public,
+  RequireVerifiedEmail,
+} from '../auth/auth.decorators.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { RateLimit } from '../auth/rate-limit/rate-limit.guard.js';
 import { OpponentsService } from './opponents.service.js';
@@ -33,7 +38,9 @@ export class OpponentsController {
   @Get('opponent-listings')
   @Public()
   @RateLimit({ name: 'public-browse', limit: 120, windowSeconds: 60, by: 'ip' })
-  @ApiOperation({ summary: 'Annonces « cherche un adversaire » ouvertes (ville, complexe, date, niveau, format)' })
+  @ApiOperation({
+    summary: 'Annonces « cherche un adversaire » ouvertes (ville, complexe, date, niveau, format)',
+  })
   list(
     @OptionalUser() user: AuthUser | null,
     @Query(new ZodValidationPipe(listOpponentListingsQuerySchema)) query: ListOpponentListingsQuery,
@@ -57,7 +64,10 @@ export class OpponentsController {
   @Public()
   @RateLimit({ name: 'public-browse', limit: 120, windowSeconds: 60, by: 'ip' })
   @ApiOperation({ summary: 'Détail d’une annonce' })
-  get(@OptionalUser() user: AuthUser | null, @Param('listingId', uuid) listingId: string): Promise<OpponentListingView> {
+  get(
+    @OptionalUser() user: AuthUser | null,
+    @Param('listingId', uuid) listingId: string,
+  ): Promise<OpponentListingView> {
     return this.opponents.getForViewer(listingId, user);
   }
 
@@ -76,15 +86,23 @@ export class OpponentsController {
 
   @Delete('opponent-listings/:listingId')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Retirer mon annonce (capitaine) — les demandes en attente sont rejetées' })
-  async cancel(@CurrentUser() user: AuthUser, @Param('listingId', uuid) listingId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  @ApiOperation({
+    summary: 'Retirer mon annonce (capitaine) — les demandes en attente sont rejetées',
+  })
+  async cancel(
+    @CurrentUser() user: AuthUser,
+    @Param('listingId', uuid) listingId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.opponents.cancel(user, listingId, ctx);
   }
 
   @Post('opponent-listings/:listingId/requests')
   @RequireVerifiedEmail()
   @RateLimit({ name: 'opponent-request', limit: 30, windowSeconds: DAY, by: 'user' })
-  @ApiOperation({ summary: 'Demander à affronter l’équipe annonceuse (capitaine de l’équipe demandeuse)' })
+  @ApiOperation({
+    summary: 'Demander à affronter l’équipe annonceuse (capitaine de l’équipe demandeuse)',
+  })
   @ApiZodBody(createMatchRequestSchema)
   request(
     @CurrentUser() user: AuthUser,
@@ -96,13 +114,18 @@ export class OpponentsController {
 
   @Get('opponent-listings/:listingId/requests')
   @ApiOperation({ summary: 'Demandes reçues pour mon annonce (capitaine)' })
-  requests(@CurrentUser() user: AuthUser, @Param('listingId', uuid) listingId: string): Promise<MatchRequestView[]> {
+  requests(
+    @CurrentUser() user: AuthUser,
+    @Param('listingId', uuid) listingId: string,
+  ): Promise<MatchRequestView[]> {
     return this.opponents.listRequests(user, listingId);
   }
 
   @Post('opponent-listings/:listingId/requests/:requestId/accept')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Accepter une demande : le match est créé, les autres demandes sont rejetées' })
+  @ApiOperation({
+    summary: 'Accepter une demande : le match est créé, les autres demandes sont rejetées',
+  })
   accept(
     @CurrentUser() user: AuthUser,
     @Param('listingId', uuid) listingId: string,
@@ -125,8 +148,13 @@ export class OpponentsController {
 
   @Delete('opponent-requests/:requestId')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Retirer ma demande tant qu’elle est en attente (capitaine de l’équipe demandeuse)' })
-  async cancelRequest(@CurrentUser() user: AuthUser, @Param('requestId', uuid) requestId: string): Promise<void> {
+  @ApiOperation({
+    summary: 'Retirer ma demande tant qu’elle est en attente (capitaine de l’équipe demandeuse)',
+  })
+  async cancelRequest(
+    @CurrentUser() user: AuthUser,
+    @Param('requestId', uuid) requestId: string,
+  ): Promise<void> {
     await this.opponents.cancelRequest(user, requestId);
   }
 }

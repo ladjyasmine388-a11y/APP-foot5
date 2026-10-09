@@ -20,21 +20,33 @@ describe('envoi d’images', () => {
     t = await createTestApp();
     w = await createWorld(t);
     manager = await newPlayer(t);
-    await prisma.venueStaff.create({ data: { venueId: w.venue.id, userId: manager.userId, role: 'MANAGER' } });
+    await prisma.venueStaff.create({
+      data: { venueId: w.venue.id, userId: manager.userId, role: 'MANAGER' },
+    });
   });
   afterAll(() => t.close());
   beforeEach(() => t.rateLimits.reset());
 
   // ───────────────────────── Outils ─────────────────────────
 
-  const send = (method: 'PUT' | 'POST', url: string, user: Signup | null, body: Buffer | string, contentType: string) =>
+  const send = (
+    method: 'PUT' | 'POST',
+    url: string,
+    user: Signup | null,
+    body: Buffer | string,
+    contentType: string,
+  ) =>
     t.app.inject({
       method,
       url: `/api/v1${url}`,
       payload: body,
-      headers: { 'content-type': contentType, ...(user ? { authorization: `Bearer ${user.accessToken}` } : {}) },
+      headers: {
+        'content-type': contentType,
+        ...(user ? { authorization: `Bearer ${user.accessToken}` } : {}),
+      },
     });
-  const putAvatar = (user: Signup | null, body: Buffer | string, contentType = 'image/jpeg') => send('PUT', '/me/avatar', user, body, contentType);
+  const putAvatar = (user: Signup | null, body: Buffer | string, contentType = 'image/jpeg') =>
+    send('PUT', '/me/avatar', user, body, contentType);
   const path = (url: string): string => new URL(url).pathname.replace(/^\/api\/v1/, '');
   const files = async (): Promise<string[]> => readdir(STORAGE_DIR).catch(() => []);
 
@@ -89,7 +101,10 @@ describe('envoi d’images', () => {
 
     it('ne supprime jamais un fichier qui n’est pas le nôtre (avatar externe historique)', async () => {
       const user = await newPlayer(t);
-      await prisma.user.update({ where: { id: user.userId }, data: { avatarUrl: 'https://cdn.example.com/../../etc/passwd.jpg' } });
+      await prisma.user.update({
+        where: { id: user.userId },
+        data: { avatarUrl: 'https://cdn.example.com/../../etc/passwd.jpg' },
+      });
       expect((await putAvatar(user, jpegWithGps())).statusCode).toBe(200);
     });
 
@@ -108,7 +123,11 @@ describe('envoi d’images', () => {
       const cases: [string, Buffer | string, string][] = [
         ['PNG annoncé JPEG', pngWithText(), 'image/jpeg'],
         ['JPEG annoncé PNG', jpegWithGps(), 'image/png'],
-        ['SVG annoncé PNG', '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', 'image/png'],
+        [
+          'SVG annoncé PNG',
+          '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+          'image/png',
+        ],
         ['HTML annoncé JPEG', '<html><script>alert(1)</script></html>', 'image/jpeg'],
         ['exécutable annoncé WebP', Buffer.from('MZ\x90\0\x03\0\0\0'), 'image/webp'],
         ['JPEG tronqué', jpegWithGps().subarray(0, 14), 'image/jpeg'],
@@ -127,10 +146,16 @@ describe('envoi d’images', () => {
       const user = await newPlayer(t);
       expect((await putAvatar(user, '<svg/>', 'image/svg+xml')).statusCode).toBe(415);
       expect((await putAvatar(user, 'GIF89a', 'image/gif')).statusCode).toBe(415);
-      expect((await putAvatar(user, '{"url":"https://evil.example/x.png"}', 'application/json')).statusCode).toBe(400);
+      expect(
+        (await putAvatar(user, '{"url":"https://evil.example/x.png"}', 'application/json'))
+          .statusCode,
+      ).toBe(400);
       expect((await putAvatar(user, Buffer.alloc(0), 'image/jpeg')).statusCode).toBe(400);
 
-      const huge = Buffer.concat([jpegWithGps().subarray(0, 4), Buffer.alloc(2 * 1024 * 1024 + 10)]);
+      const huge = Buffer.concat([
+        jpegWithGps().subarray(0, 4),
+        Buffer.alloc(2 * 1024 * 1024 + 10),
+      ]);
       const tooBig = await putAvatar(user, huge, 'image/jpeg');
       expect(tooBig.statusCode).toBe(413);
     });
@@ -141,7 +166,10 @@ describe('envoi d’images', () => {
         method: 'PATCH',
         url: '/api/v1/me',
         payload: JSON.stringify({ city: 'x'.repeat(150_000) }),
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${user.accessToken}` },
+        headers: {
+          'content-type': 'application/json',
+          authorization: `Bearer ${user.accessToken}`,
+        },
       });
       expect(res.statusCode).toBe(413);
     });
@@ -149,11 +177,21 @@ describe('envoi d’images', () => {
 
   describe('lecture', () => {
     it('refuse les clés qui ne sont pas des noms générés (traversée de répertoire comprise) et ignore les fichiers inconnus', async () => {
-      for (const key of ['..%2F..%2F.env', '../.env', 'x.jpg', 'passwd', '%2e%2e%2f%2e%2e%2fetc%2fpasswd', '00000000-0000-4000-8000-000000000000.svg', '00000000-0000-4000-8000-000000000000.jpg%00.png']) {
+      for (const key of [
+        '..%2F..%2F.env',
+        '../.env',
+        'x.jpg',
+        'passwd',
+        '%2e%2e%2f%2e%2e%2fetc%2fpasswd',
+        '00000000-0000-4000-8000-000000000000.svg',
+        '00000000-0000-4000-8000-000000000000.jpg%00.png',
+      ]) {
         const res = await get(t, `/uploads/${key}`);
         expect([400, 404], key).toContain(res.statusCode);
       }
-      expect((await get(t, '/uploads/00000000-0000-4000-8000-000000000000.jpg')).statusCode).toBe(404);
+      expect((await get(t, '/uploads/00000000-0000-4000-8000-000000000000.jpg')).statusCode).toBe(
+        404,
+      );
     });
   });
 
@@ -165,10 +203,20 @@ describe('envoi d’images', () => {
       const team = await makeTeam(t, captain, 3);
       const res = await send('PUT', `/teams/${team.id}/logo`, captain, pngWithText(), 'image/png');
       expect(res.statusCode).toBe(200);
-      expect((await get(t, `/teams/${team.id}`, captain.accessToken)).json().logoUrl).toBe(res.json().url);
-      expect(await prisma.auditLog.count({ where: { action: 'team.logo_set', entityId: team.id } })).toBe(1);
+      expect((await get(t, `/teams/${team.id}`, captain.accessToken)).json().logoUrl).toBe(
+        res.json().url,
+      );
+      expect(
+        await prisma.auditLog.count({ where: { action: 'team.logo_set', entityId: team.id } }),
+      ).toBe(1);
 
-      const second = await send('PUT', `/teams/${team.id}/logo`, captain, pngWithText('autre'), 'image/png');
+      const second = await send(
+        'PUT',
+        `/teams/${team.id}/logo`,
+        captain,
+        pngWithText('autre'),
+        'image/png',
+      );
       expect((await get(t, path(res.json().url))).statusCode).toBe(404);
       expect((await get(t, path(second.json().url))).statusCode).toBe(200);
       expect((await del(t, `/teams/${team.id}/logo`, captain.accessToken)).statusCode).toBe(204);
@@ -181,10 +229,28 @@ describe('envoi d’images', () => {
       const stranger = await newPlayer(t);
       const before = (await files()).length;
 
-      expect((await send('PUT', `/teams/${team.id}/logo`, team.members[0]!, pngWithText(), 'image/png')).statusCode).toBe(403);
-      expect((await send('PUT', `/teams/${team.id}/logo`, stranger, pngWithText(), 'image/png')).statusCode).toBe(403);
-      expect((await send('PUT', '/teams/00000000-0000-4000-8000-000000000000/logo', captain, pngWithText(), 'image/png')).statusCode).toBe(404);
-      expect((await send('PUT', `/teams/${team.id}/logo`, null, pngWithText(), 'image/png')).statusCode).toBe(401);
+      expect(
+        (await send('PUT', `/teams/${team.id}/logo`, team.members[0]!, pngWithText(), 'image/png'))
+          .statusCode,
+      ).toBe(403);
+      expect(
+        (await send('PUT', `/teams/${team.id}/logo`, stranger, pngWithText(), 'image/png'))
+          .statusCode,
+      ).toBe(403);
+      expect(
+        (
+          await send(
+            'PUT',
+            '/teams/00000000-0000-4000-8000-000000000000/logo',
+            captain,
+            pngWithText(),
+            'image/png',
+          )
+        ).statusCode,
+      ).toBe(404);
+      expect(
+        (await send('PUT', `/teams/${team.id}/logo`, null, pngWithText(), 'image/png')).statusCode,
+      ).toBe(401);
       expect((await files()).length).toBe(before);
       expect((await del(t, `/teams/${team.id}/logo`, stranger.accessToken)).statusCode).toBe(403);
     });
@@ -193,25 +259,45 @@ describe('envoi d’images', () => {
   // ───────────────────────── Photos de complexe ─────────────────────────
 
   describe('photos de complexe', () => {
-    const add = (user: Signup | null, venueId: string, body: Buffer = jpegWithGps(), type = 'image/jpeg') => send('POST', `/manage/venues/${venueId}/photos`, user, body, type);
+    const add = (
+      user: Signup | null,
+      venueId: string,
+      body: Buffer = jpegWithGps(),
+      type = 'image/jpeg',
+    ) => send('POST', `/manage/venues/${venueId}/photos`, user, body, type);
 
     it('un gérant ajoute et retire des photos ; elles figurent sur la fiche publique', async () => {
       const world = await createWorld(t);
       const boss = await newPlayer(t);
-      await prisma.venueStaff.create({ data: { venueId: world.venue.id, userId: boss.userId, role: 'MANAGER' } });
+      await prisma.venueStaff.create({
+        data: { venueId: world.venue.id, userId: boss.userId, role: 'MANAGER' },
+      });
 
       const one = (await add(boss, world.venue.id, jpegWithGps('une'))).json().url;
       const two = (await add(boss, world.venue.id, jpegWithGps('deux'))).json().url;
       const detail = (await get(t, `/venues/${world.venue.slug}`)).json();
       expect(detail.photos).toEqual([one, two]);
-      expect(await prisma.auditLog.count({ where: { action: 'venue.photo_add', entityId: world.venue.id } })).toBe(2);
+      expect(
+        await prisma.auditLog.count({
+          where: { action: 'venue.photo_add', entityId: world.venue.id },
+        }),
+      ).toBe(2);
 
       const key = one.split('/').pop() as string;
-      expect((await del(t, `/manage/venues/${world.venue.id}/photos/${key}`, boss.accessToken)).statusCode).toBe(204);
+      expect(
+        (await del(t, `/manage/venues/${world.venue.id}/photos/${key}`, boss.accessToken))
+          .statusCode,
+      ).toBe(204);
       expect((await get(t, `/venues/${world.venue.slug}`)).json().photos).toEqual([two]);
       expect((await get(t, path(one))).statusCode).toBe(404); // le fichier est supprimé aussi
-      expect((await del(t, `/manage/venues/${world.venue.id}/photos/${key}`, boss.accessToken)).statusCode).toBe(404);
-      expect((await del(t, `/manage/venues/${world.venue.id}/photos/pas-une-cle`, boss.accessToken)).statusCode).toBe(400);
+      expect(
+        (await del(t, `/manage/venues/${world.venue.id}/photos/${key}`, boss.accessToken))
+          .statusCode,
+      ).toBe(404);
+      expect(
+        (await del(t, `/manage/venues/${world.venue.id}/photos/pas-une-cle`, boss.accessToken))
+          .statusCode,
+      ).toBe(400);
     });
 
     it('réservé aux gérants : le simple personnel (403) et un étranger (404) ne peuvent rien ajouter ni retirer', async () => {
@@ -223,44 +309,69 @@ describe('envoi d’images', () => {
 
       const url = (await add(manager, w.venue.id)).json().url;
       const key = url.split('/').pop() as string;
-      expect((await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, w.staff.accessToken)).statusCode).toBe(403);
-      expect((await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, w.outsider.accessToken)).statusCode).toBe(404);
+      expect(
+        (await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, w.staff.accessToken))
+          .statusCode,
+      ).toBe(403);
+      expect(
+        (await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, w.outsider.accessToken))
+          .statusCode,
+      ).toBe(404);
       expect((await get(t, path(url))).statusCode).toBe(200);
     });
 
     it('un gérant d’un AUTRE complexe ne peut pas toucher aux photos de celui-ci', async () => {
       const other = await createWorld(t);
       const otherBoss = await newPlayer(t);
-      await prisma.venueStaff.create({ data: { venueId: other.venue.id, userId: otherBoss.userId, role: 'OWNER' } });
+      await prisma.venueStaff.create({
+        data: { venueId: other.venue.id, userId: otherBoss.userId, role: 'OWNER' },
+      });
       const url = (await add(manager, w.venue.id)).json().url;
       const key = url.split('/').pop() as string;
       expect((await add(otherBoss, w.venue.id)).statusCode).toBe(404);
-      expect((await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, otherBoss.accessToken)).statusCode).toBe(404);
-      expect((await del(t, `/manage/venues/${other.venue.id}/photos/${key}`, otherBoss.accessToken)).statusCode).toBe(404); // et ne peut pas la « réclamer »
+      expect(
+        (await del(t, `/manage/venues/${w.venue.id}/photos/${key}`, otherBoss.accessToken))
+          .statusCode,
+      ).toBe(404);
+      expect(
+        (await del(t, `/manage/venues/${other.venue.id}/photos/${key}`, otherBoss.accessToken))
+          .statusCode,
+      ).toBe(404); // et ne peut pas la « réclamer »
       expect((await get(t, path(url))).statusCode).toBe(200);
     });
 
     it('10 photos au maximum ; la 11e est refusée sans laisser de fichier orphelin', async () => {
       const world = await createWorld(t);
       const boss = await newPlayer(t);
-      await prisma.venueStaff.create({ data: { venueId: world.venue.id, userId: boss.userId, role: 'OWNER' } });
-      for (let i = 0; i < 10; i++) expect((await add(boss, world.venue.id, jpegWithGps(`photo-${i}`))).statusCode).toBe(201);
+      await prisma.venueStaff.create({
+        data: { venueId: world.venue.id, userId: boss.userId, role: 'OWNER' },
+      });
+      for (let i = 0; i < 10; i++)
+        expect((await add(boss, world.venue.id, jpegWithGps(`photo-${i}`))).statusCode).toBe(201);
 
       const before = (await files()).length;
       const eleventh = await add(boss, world.venue.id, jpegWithGps('onzième'));
       expect(eleventh.statusCode).toBe(409);
       expect((await files()).length).toBe(before);
-      expect((await prisma.venue.findUniqueOrThrow({ where: { id: world.venue.id } })).photos).toHaveLength(10);
+      expect(
+        (await prisma.venue.findUniqueOrThrow({ where: { id: world.venue.id } })).photos,
+      ).toHaveLength(10);
     });
 
     it('CONCURRENCE : 15 ajouts simultanés → jamais plus de 10 photos', async () => {
       const world = await createWorld(t);
       const boss = await newPlayer(t);
-      await prisma.venueStaff.create({ data: { venueId: world.venue.id, userId: boss.userId, role: 'OWNER' } });
-      const results = await Promise.all(Array.from({ length: 15 }, (_, i) => add(boss, world.venue.id, jpegWithGps(`course-${i}`))));
+      await prisma.venueStaff.create({
+        data: { venueId: world.venue.id, userId: boss.userId, role: 'OWNER' },
+      });
+      const results = await Promise.all(
+        Array.from({ length: 15 }, (_, i) => add(boss, world.venue.id, jpegWithGps(`course-${i}`))),
+      );
       expect(results.filter((r) => r.statusCode === 201)).toHaveLength(10);
       expect(results.filter((r) => r.statusCode === 409)).toHaveLength(5);
-      expect((await prisma.venue.findUniqueOrThrow({ where: { id: world.venue.id } })).photos).toHaveLength(10);
+      expect(
+        (await prisma.venue.findUniqueOrThrow({ where: { id: world.venue.id } })).photos,
+      ).toHaveLength(10);
     });
   });
 });

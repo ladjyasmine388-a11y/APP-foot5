@@ -49,11 +49,19 @@ export const common = {
   'common.tomorrow': { fr: 'Demain', en: 'Tomorrow', ar: 'غدًا' },
   'common.upcoming': { fr: 'À venir', en: 'Upcoming', ar: 'القادمة' },
   'common.past': { fr: 'Passés', en: 'Past', ar: 'السابقة' },
-  'common.skipToContent': { fr: 'Aller au contenu', en: 'Skip to content', ar: 'انتقل إلى المحتوى' },
+  'common.skipToContent': {
+    fr: 'Aller au contenu',
+    en: 'Skip to content',
+    ar: 'انتقل إلى المحتوى',
+  },
   'common.copied': { fr: 'Copié', en: 'Copied', ar: 'تم النسخ' },
   'common.saved': { fr: 'Enregistré', en: 'Saved', ar: 'تم الحفظ' },
   'common.players': { fr: 'joueurs', en: 'players', ar: 'لاعبين' },
-  'common.perPlayerIndicative': { fr: 'Part indicative par joueur', en: 'Indicative share per player', ar: 'الحصة التقريبية لكل لاعب' },
+  'common.perPlayerIndicative': {
+    fr: 'Part indicative par joueur',
+    en: 'Indicative share per player',
+    ar: 'الحصة التقريبية لكل لاعب',
+  },
 
   'level.BEGINNER': { fr: 'Débutant', en: 'Beginner', ar: 'مبتدئ' },
   'level.INTERMEDIATE': { fr: 'Intermédiaire', en: 'Intermediate', ar: 'متوسط' },
@@ -90,7 +98,15 @@ export const common = {
   'nav.menu': { fr: 'Menu principal', en: 'Main menu', ar: 'القائمة الرئيسية' },
 
   'page.notFound.title': { fr: 'Page introuvable', en: 'Page not found', ar: 'الصفحة غير موجودة' },
-  'page.notFound.text': { fr: 'Cette page n’existe pas ou a été déplacée.', en: 'This page does not exist or has moved.', ar: 'هذه الصفحة غير موجودة أو تم نقلها.' },
+  'page.notFound.text': {
+    fr: 'Cette page n’existe pas ou a été déplacée.',
+    en: 'This page does not exist or has moved.',
+    ar: 'هذه الصفحة غير موجودة أو تم نقلها.',
+  },
   'page.forbidden.title': { fr: 'Accès refusé', en: 'Access denied', ar: 'الوصول مرفوض' },
-  'page.forbidden.text': { fr: 'Vous n’avez pas les droits pour voir cette page.', en: 'You do not have permission to view this page.', ar: 'ليست لديك صلاحية لعرض هذه الصفحة.' },
+  'page.forbidden.text': {
+    fr: 'Vous n’avez pas les droits pour voir cette page.',
+    en: 'You do not have permission to view this page.',
+    ar: 'ليست لديك صلاحية لعرض هذه الصفحة.',
+  },
 } as const satisfies Record<string, Msg>;

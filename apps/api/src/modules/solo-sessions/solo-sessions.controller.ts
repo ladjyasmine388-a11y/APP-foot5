@@ -14,7 +14,12 @@ import { z } from 'zod';
 import { type RequestContext, ReqCtx } from '../../common/http/request-context.js';
 import { ApiZodBody } from '../../common/zod/api-zod.js';
 import { ZodValidationPipe } from '../../common/zod/zod-validation.pipe.js';
-import { CurrentUser, OptionalUser, Public, RequireVerifiedEmail } from '../auth/auth.decorators.js';
+import {
+  CurrentUser,
+  OptionalUser,
+  Public,
+  RequireVerifiedEmail,
+} from '../auth/auth.decorators.js';
 import type { AuthUser } from '../auth/auth.types.js';
 import { RateLimit } from '../auth/rate-limit/rate-limit.guard.js';
 import { SoloSessionsService } from './solo-sessions.service.js';
@@ -33,7 +38,8 @@ export class SoloSessionsController {
   @RateLimit({ name: 'public-browse', limit: 120, windowSeconds: 60, by: 'ip' })
   @ApiOperation({
     summary: 'Sessions « Complétez votre équipe » ouvertes',
-    description: 'Filtres : ville, complexe, date, heure (± fenêtre), niveau, places libres. Tri : soonest | recommended (connecté) | spots. La liste des joueurs n’est visible que connecté.',
+    description:
+      'Filtres : ville, complexe, date, heure (± fenêtre), niveau, places libres. Tri : soonest | recommended (connecté) | spots. La liste des joueurs n’est visible que connecté.',
   })
   list(
     @OptionalUser() user: AuthUser | null,
@@ -55,7 +61,10 @@ export class SoloSessionsController {
   @Public()
   @RateLimit({ name: 'public-browse', limit: 120, windowSeconds: 60, by: 'ip' })
   @ApiOperation({ summary: 'Détail d’une session' })
-  get(@OptionalUser() user: AuthUser | null, @Param('sessionId', uuid) sessionId: string): Promise<SoloSessionView> {
+  get(
+    @OptionalUser() user: AuthUser | null,
+    @Param('sessionId', uuid) sessionId: string,
+  ): Promise<SoloSessionView> {
     return this.sessions.getForViewer(sessionId, user);
   }
 
@@ -64,7 +73,8 @@ export class SoloSessionsController {
   @RateLimit({ name: 'solo-create', limit: 20, windowSeconds: DAY, by: 'user' })
   @ApiOperation({
     summary: 'Ouvrir des places sur ma réservation confirmée',
-    description: 'Le règlement de chaque joueur se fait hors plateforme (entre joueurs, sur place) ; seule la réservation du terrain passe par la plateforme.',
+    description:
+      'Le règlement de chaque joueur se fait hors plateforme (entre joueurs, sur place) ; seule la réservation du terrain passe par la plateforme.',
   })
   @ApiZodBody(createSoloSessionSchema)
   create(
@@ -80,21 +90,34 @@ export class SoloSessionsController {
   @RequireVerifiedEmail()
   @RateLimit({ name: 'solo-join', limit: 60, windowSeconds: 3600, by: 'user' })
   @ApiOperation({ summary: 'Rejoindre une session (place garantie, jamais de surréservation)' })
-  join(@CurrentUser() user: AuthUser, @Param('sessionId', uuid) sessionId: string): Promise<SoloSessionView> {
+  join(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', uuid) sessionId: string,
+  ): Promise<SoloSessionView> {
     return this.sessions.join(user, sessionId);
   }
 
   @Post('solo-sessions/:sessionId/leave')
   @HttpCode(204)
   @ApiOperation({ summary: 'Quitter une session avant son début' })
-  async leave(@CurrentUser() user: AuthUser, @Param('sessionId', uuid) sessionId: string): Promise<void> {
+  async leave(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', uuid) sessionId: string,
+  ): Promise<void> {
     await this.sessions.leave(user, sessionId);
   }
 
   @Delete('solo-sessions/:sessionId')
   @HttpCode(204)
-  @ApiOperation({ summary: 'Annuler une session (hôte ou personnel du complexe) — la réservation du terrain reste acquise' })
-  async cancel(@CurrentUser() user: AuthUser, @Param('sessionId', uuid) sessionId: string, @ReqCtx() ctx: RequestContext): Promise<void> {
+  @ApiOperation({
+    summary:
+      'Annuler une session (hôte ou personnel du complexe) — la réservation du terrain reste acquise',
+  })
+  async cancel(
+    @CurrentUser() user: AuthUser,
+    @Param('sessionId', uuid) sessionId: string,
+    @ReqCtx() ctx: RequestContext,
+  ): Promise<void> {
     await this.sessions.cancel(user, sessionId, ctx);
   }
 
@@ -102,7 +125,9 @@ export class SoloSessionsController {
 
   @Post('manage/venues/:venueId/solo-sessions')
   @RateLimit({ name: 'solo-create', limit: 100, windowSeconds: DAY, by: 'user' })
-  @ApiOperation({ summary: 'Le complexe ouvre des places sur l’une de ses réservations confirmées (personnel)' })
+  @ApiOperation({
+    summary: 'Le complexe ouvre des places sur l’une de ses réservations confirmées (personnel)',
+  })
   @ApiZodBody(createSoloSessionSchema)
   createForVenue(
     @CurrentUser() user: AuthUser,

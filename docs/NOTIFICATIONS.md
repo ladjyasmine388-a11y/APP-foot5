@@ -5,23 +5,23 @@
 Chaque événement métier (`DomainEvents`, émis APRÈS la validation de la transaction) produit une notification dans
 l'application et, pour les types importants, un email **dans la langue du compte** (ar / fr / en, heure d'Alger).
 
-| Événement | Type | Destinataire | Email |
-|---|---|---|---|
-| `booking.confirmed` | `BOOKING_CONFIRMED` | client | oui |
-| `booking.cancelled` | `BOOKING_CANCELLED` | client | oui |
-| `booking.expired` | `BOOKING_EXPIRED` | client | oui |
-| `refund.processed` | `REFUND_PROCESSED` | client | oui |
-| `team.invitation_created` | `TEAM_INVITATION_RECEIVED` | invité (compte connu) | oui |
-| `team.invitation_accepted` | `TEAM_INVITATION_ACCEPTED` | capitaine | non |
-| `solo.player_joined` (≤ 2 places restantes) | `SOLO_ALMOST_FULL` | hôte | non |
-| `solo.full` | `SOLO_FULL` | hôte + joueurs | oui |
-| `solo.cancelled` | `SOLO_CANCELLED` | joueurs + hôte | oui |
-| `opponent.request_created` | `OPPONENT_REQUEST_RECEIVED` | capitaine annonceur | oui |
-| `opponent.request_accepted` | `OPPONENT_ACCEPTED` | capitaine demandeur | oui |
-| `opponent.request_rejected` | `OPPONENT_REJECTED` | demandeur | non |
-| `match.cancelled` | `MATCH_CANCELLED` | participants | oui |
-| rappel (job) | `MATCH_REMINDER` | participants | oui |
-| *(étape 9)* | `VENUE_APPROVED` / `VENUE_SUSPENDED` | gérants | oui |
+| Événement                                   | Type                                 | Destinataire          | Email |
+| ------------------------------------------- | ------------------------------------ | --------------------- | ----- |
+| `booking.confirmed`                         | `BOOKING_CONFIRMED`                  | client                | oui   |
+| `booking.cancelled`                         | `BOOKING_CANCELLED`                  | client                | oui   |
+| `booking.expired`                           | `BOOKING_EXPIRED`                    | client                | oui   |
+| `refund.processed`                          | `REFUND_PROCESSED`                   | client                | oui   |
+| `team.invitation_created`                   | `TEAM_INVITATION_RECEIVED`           | invité (compte connu) | oui   |
+| `team.invitation_accepted`                  | `TEAM_INVITATION_ACCEPTED`           | capitaine             | non   |
+| `solo.player_joined` (≤ 2 places restantes) | `SOLO_ALMOST_FULL`                   | hôte                  | non   |
+| `solo.full`                                 | `SOLO_FULL`                          | hôte + joueurs        | oui   |
+| `solo.cancelled`                            | `SOLO_CANCELLED`                     | joueurs + hôte        | oui   |
+| `opponent.request_created`                  | `OPPONENT_REQUEST_RECEIVED`          | capitaine annonceur   | oui   |
+| `opponent.request_accepted`                 | `OPPONENT_ACCEPTED`                  | capitaine demandeur   | oui   |
+| `opponent.request_rejected`                 | `OPPONENT_REJECTED`                  | demandeur             | non   |
+| `match.cancelled`                           | `MATCH_CANCELLED`                    | participants          | oui   |
+| rappel (job)                                | `MATCH_REMINDER`                     | participants          | oui   |
+| _(étape 9)_                                 | `VENUE_APPROVED` / `VENUE_SUSPENDED` | gérants               | oui   |
 
 Règles :
 

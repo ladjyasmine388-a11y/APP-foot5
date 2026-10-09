@@ -9,7 +9,8 @@ const TAGS: Record<Locale, string> = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-DZ-u-nu
 /** Nombres : l'espace comme séparateur de milliers en français ET en arabe (le point arabe se lirait comme une décimale). */
 const NUMBER_TAGS: Record<Locale, string> = { fr: 'fr-FR', en: 'en-GB', ar: 'fr-FR' };
 
-export const isLocale = (value: unknown): value is Locale => typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
+export const isLocale = (value: unknown): value is Locale =>
+  typeof value === 'string' && (LOCALES as readonly string[]).includes(value);
 
 export const directionOf = (locale: Locale): 'rtl' | 'ltr' => (locale === 'ar' ? 'rtl' : 'ltr');
 
@@ -28,17 +29,30 @@ export function formatMoney(amountMinor: number, locale: Locale): string {
   return locale === 'ar' ? `${number} دج` : `${number} DA`;
 }
 
-export function formatDate(iso: string | Date, locale: Locale, style: 'short' | 'long' = 'long'): string {
-  return new Intl.DateTimeFormat(TAGS[locale], style === 'long'
-    ? { weekday: 'long', day: 'numeric', month: 'long', timeZone: DISPLAY_TZ }
-    : { day: '2-digit', month: '2-digit', timeZone: DISPLAY_TZ }).format(typeof iso === 'string' ? new Date(iso) : iso);
+export function formatDate(
+  iso: string | Date,
+  locale: Locale,
+  style: 'short' | 'long' = 'long',
+): string {
+  return new Intl.DateTimeFormat(
+    TAGS[locale],
+    style === 'long'
+      ? { weekday: 'long', day: 'numeric', month: 'long', timeZone: DISPLAY_TZ }
+      : { day: '2-digit', month: '2-digit', timeZone: DISPLAY_TZ },
+  ).format(typeof iso === 'string' ? new Date(iso) : iso);
 }
 
 export function formatTime(iso: string | Date, locale: Locale): string {
-  return new Intl.DateTimeFormat(TAGS[locale], { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: DISPLAY_TZ }).format(typeof iso === 'string' ? new Date(iso) : iso);
+  return new Intl.DateTimeFormat(TAGS[locale], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: DISPLAY_TZ,
+  }).format(typeof iso === 'string' ? new Date(iso) : iso);
 }
 
-export const formatDateTime = (iso: string | Date, locale: Locale): string => `${formatDate(iso, locale)} · ${formatTime(iso, locale)}`;
+export const formatDateTime = (iso: string | Date, locale: Locale): string =>
+  `${formatDate(iso, locale)} · ${formatTime(iso, locale)}`;
 
 export function formatNumber(value: number, locale: Locale, maximumFractionDigits = 1): string {
   return new Intl.NumberFormat(NUMBER_TAGS[locale], { maximumFractionDigits }).format(value);
@@ -53,7 +67,9 @@ export function localDate(days = 0, from: Date = new Date()): string {
 /** `{name}` → valeur. Une variable manquante est laissée visible plutôt que remplacée par « undefined ». */
 export function interpolate(template: string, params?: Record<string, string | number>): string {
   if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in params ? String(params[key]) : match));
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in params ? String(params[key]) : match,
+  );
 }
 
 /**
@@ -62,11 +78,31 @@ export function interpolate(template: string, params?: Record<string, string | n
  */
 export function localToUtcIso(date: string, hhmm: string, timeZone: string = DISPLAY_TZ): string {
   const [h, m] = hhmm.split(':').map(Number) as [number, number];
-  const wanted = Date.parse(`${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`);
+  const wanted = Date.parse(
+    `${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00Z`,
+  );
   const offsetAt = (instant: number): number => {
-    const parts = new Intl.DateTimeFormat('en-US', { timeZone, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date(instant));
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).formatToParts(new Date(instant));
     const get = (type: string): number => Number(parts.find((p) => p.type === type)?.value);
-    return Date.UTC(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second')) - instant;
+    return (
+      Date.UTC(
+        get('year'),
+        get('month') - 1,
+        get('day'),
+        get('hour'),
+        get('minute'),
+        get('second'),
+      ) - instant
+    );
   };
   let guess = wanted - offsetAt(wanted);
   guess = wanted - offsetAt(guess);

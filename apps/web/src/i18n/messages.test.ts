@@ -12,18 +12,25 @@ describe('traductions', () => {
 
   it('chaque message existe dans les trois langues et n’est pas vide', () => {
     for (const [key, message] of Object.entries(messages)) {
-      for (const locale of LOCALES) expect(message[locale]?.trim().length, `${key} (${locale})`).toBeGreaterThan(0);
+      for (const locale of LOCALES)
+        expect(message[locale]?.trim().length, `${key} (${locale})`).toBeGreaterThan(0);
     }
     for (const [code, message] of Object.entries(errorMessages)) {
-      for (const locale of LOCALES) expect(message[locale]?.trim().length, `erreur ${code} (${locale})`).toBeGreaterThan(0);
+      for (const locale of LOCALES)
+        expect(message[locale]?.trim().length, `erreur ${code} (${locale})`).toBeGreaterThan(0);
     }
   });
 
   it('les variables {…} sont les mêmes dans les trois langues (aucune ne manque à la traduction)', () => {
-    const vars = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
+    const vars = (text: string) =>
+      [...text.matchAll(/\{(\w+)\}/g)]
+        .map((m) => m[1])
+        .sort()
+        .join(',');
     for (const [key, message] of Object.entries(messages)) {
       const reference = vars(message.fr);
-      for (const locale of LOCALES) expect(vars(message[locale]), `${key} (${locale})`).toBe(reference);
+      for (const locale of LOCALES)
+        expect(vars(message[locale]), `${key} (${locale})`).toBe(reference);
     }
   });
 

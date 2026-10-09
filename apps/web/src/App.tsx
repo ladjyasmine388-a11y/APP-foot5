@@ -12,30 +12,72 @@ import { HomePage } from './pages/Home';
 import { NotFoundPage } from './pages/NotFound';
 
 // Chaque page est chargée à la demande : le premier affichage ne télécharge que le socle (routeur, traductions, mise en page).
-const NotificationsPage = lazy(() => import('./pages/Notifications').then((m) => ({ default: m.NotificationsPage })));
+const NotificationsPage = lazy(() =>
+  import('./pages/Notifications').then((m) => ({ default: m.NotificationsPage })),
+);
 const ProfilePage = lazy(() => import('./pages/Profile').then((m) => ({ default: m.ProfilePage })));
-const ForgotPasswordPage = lazy(() => import('./pages/auth/Recovery').then((m) => ({ default: m.ForgotPasswordPage })));
-const ResetPasswordPage = lazy(() => import('./pages/auth/Recovery').then((m) => ({ default: m.ResetPasswordPage })));
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/auth/Recovery').then((m) => ({ default: m.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('./pages/auth/Recovery').then((m) => ({ default: m.ResetPasswordPage })),
+);
 const LoginPage = lazy(() => import('./pages/auth/Login').then((m) => ({ default: m.LoginPage })));
-const RegisterPage = lazy(() => import('./pages/auth/Register').then((m) => ({ default: m.RegisterPage })));
-const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmail').then((m) => ({ default: m.VerifyEmailPage })));
+const RegisterPage = lazy(() =>
+  import('./pages/auth/Register').then((m) => ({ default: m.RegisterPage })),
+);
+const VerifyEmailPage = lazy(() =>
+  import('./pages/auth/VerifyEmail').then((m) => ({ default: m.VerifyEmailPage })),
+);
 const BookPage = lazy(() => import('./pages/bookings/Book').then((m) => ({ default: m.BookPage })));
-const BookingDetailPage = lazy(() => import('./pages/bookings/BookingDetail').then((m) => ({ default: m.BookingDetailPage })));
-const BookingsListPage = lazy(() => import('./pages/bookings/BookingsList').then((m) => ({ default: m.BookingsListPage })));
-const PaymentReturnPage = lazy(() => import('./pages/bookings/PaymentReturn').then((m) => ({ default: m.PaymentReturnPage })));
-const MatchDetailPage = lazy(() => import('./pages/matches/Matches').then((m) => ({ default: m.MatchDetailPage })));
-const MatchNewPage = lazy(() => import('./pages/matches/Matches').then((m) => ({ default: m.MatchNewPage })));
-const MatchesListPage = lazy(() => import('./pages/matches/Matches').then((m) => ({ default: m.MatchesListPage })));
-const OpponentDetailPage = lazy(() => import('./pages/opponents/OpponentDetail').then((m) => ({ default: m.OpponentDetailPage })));
-const OpponentNewPage = lazy(() => import('./pages/opponents/OpponentNew').then((m) => ({ default: m.OpponentNewPage })));
-const OpponentsListPage = lazy(() => import('./pages/opponents/OpponentsList').then((m) => ({ default: m.OpponentsListPage })));
-const SoloDetailPage = lazy(() => import('./pages/solo/SoloDetail').then((m) => ({ default: m.SoloDetailPage })));
-const SoloListPage = lazy(() => import('./pages/solo/SoloList').then((m) => ({ default: m.SoloListPage })));
-const SoloNewPage = lazy(() => import('./pages/solo/SoloNew').then((m) => ({ default: m.SoloNewPage })));
-const TeamDetailPage = lazy(() => import('./pages/teams/TeamDetail').then((m) => ({ default: m.TeamDetailPage })));
-const TeamsListPage = lazy(() => import('./pages/teams/TeamsList').then((m) => ({ default: m.TeamsListPage })));
-const VenueDetailPage = lazy(() => import('./pages/venues/VenueDetail').then((m) => ({ default: m.VenueDetailPage })));
-const VenuesListPage = lazy(() => import('./pages/venues/VenuesList').then((m) => ({ default: m.VenuesListPage })));
+const BookingDetailPage = lazy(() =>
+  import('./pages/bookings/BookingDetail').then((m) => ({ default: m.BookingDetailPage })),
+);
+const BookingsListPage = lazy(() =>
+  import('./pages/bookings/BookingsList').then((m) => ({ default: m.BookingsListPage })),
+);
+const PaymentReturnPage = lazy(() =>
+  import('./pages/bookings/PaymentReturn').then((m) => ({ default: m.PaymentReturnPage })),
+);
+const MatchDetailPage = lazy(() =>
+  import('./pages/matches/Matches').then((m) => ({ default: m.MatchDetailPage })),
+);
+const MatchNewPage = lazy(() =>
+  import('./pages/matches/Matches').then((m) => ({ default: m.MatchNewPage })),
+);
+const MatchesListPage = lazy(() =>
+  import('./pages/matches/Matches').then((m) => ({ default: m.MatchesListPage })),
+);
+const OpponentDetailPage = lazy(() =>
+  import('./pages/opponents/OpponentDetail').then((m) => ({ default: m.OpponentDetailPage })),
+);
+const OpponentNewPage = lazy(() =>
+  import('./pages/opponents/OpponentNew').then((m) => ({ default: m.OpponentNewPage })),
+);
+const OpponentsListPage = lazy(() =>
+  import('./pages/opponents/OpponentsList').then((m) => ({ default: m.OpponentsListPage })),
+);
+const SoloDetailPage = lazy(() =>
+  import('./pages/solo/SoloDetail').then((m) => ({ default: m.SoloDetailPage })),
+);
+const SoloListPage = lazy(() =>
+  import('./pages/solo/SoloList').then((m) => ({ default: m.SoloListPage })),
+);
+const SoloNewPage = lazy(() =>
+  import('./pages/solo/SoloNew').then((m) => ({ default: m.SoloNewPage })),
+);
+const TeamDetailPage = lazy(() =>
+  import('./pages/teams/TeamDetail').then((m) => ({ default: m.TeamDetailPage })),
+);
+const TeamsListPage = lazy(() =>
+  import('./pages/teams/TeamsList').then((m) => ({ default: m.TeamsListPage })),
+);
+const VenueDetailPage = lazy(() =>
+  import('./pages/venues/VenueDetail').then((m) => ({ default: m.VenueDetailPage })),
+);
+const VenuesListPage = lazy(() =>
+  import('./pages/venues/VenuesList').then((m) => ({ default: m.VenuesListPage })),
+);
 
 // Espaces complexe et administration : chargés à la demande (la plupart des joueurs ne les ouvrent jamais).
 const ManageRoutes = lazy(() => import('./pages/manage/ManageRoutes'));

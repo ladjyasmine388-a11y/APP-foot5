@@ -17,6 +17,7 @@
     "db:status": "prisma migrate status",
     "db:seed": "prisma db seed",
     "db:seed:demo": "tsx prisma/seed.ts --demo",
+    "db:create-admin": "tsx prisma/create-admin.ts",
     "db:studio": "prisma studio"
   },
   "dependencies": {

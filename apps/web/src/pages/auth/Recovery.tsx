@@ -33,14 +33,31 @@ export function ForgotPasswordPage() {
   };
 
   return (
-    <AuthShell title={t('auth.forgot.title')} subtitle={t('auth.forgot.text')} footer={<Link className="text-brand-700 underline" to="/login">{t('nav.login')}</Link>}>
+    <AuthShell
+      title={t('auth.forgot.title')}
+      subtitle={t('auth.forgot.text')}
+      footer={
+        <Link className="text-brand-700 underline" to="/login">
+          {t('nav.login')}
+        </Link>
+      }
+    >
       {sent ? (
         <Alert tone="success">{t('auth.forgot.sent')}</Alert>
       ) : (
         <form onSubmit={submit} noValidate className="space-y-4">
           {failure !== null && <Alert tone="error">{tError(failure)}</Alert>}
           <Field label={t('auth.email')} error={errors['email'] ? t('form.invalidField') : null}>
-            {(p) => <Input {...p} type="email" autoComplete="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)} />}
+            {(p) => (
+              <Input
+                {...p}
+                type="email"
+                autoComplete="email"
+                inputMode="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
           </Field>
           <Button type="submit" loading={busy} className="w-full">
             {t('auth.forgot.submit')}
@@ -87,8 +104,20 @@ export function ResetPasswordPage() {
         <form onSubmit={submit} noValidate className="space-y-4">
           {failure !== null && <Alert tone="error">{tError(failure)}</Alert>}
           {errors['token'] && <Alert tone="error">{t('auth.verify.failed')}</Alert>}
-          <Field label={t('auth.password')} hint={t('auth.passwordHint')} error={errors['password'] ? t('auth.passwordHint') : null}>
-            {(p) => <Input {...p} type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />}
+          <Field
+            label={t('auth.password')}
+            hint={t('auth.passwordHint')}
+            error={errors['password'] ? t('auth.passwordHint') : null}
+          >
+            {(p) => (
+              <Input
+                {...p}
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            )}
           </Field>
           <Button type="submit" loading={busy} className="w-full">
             {t('auth.reset.submit')}

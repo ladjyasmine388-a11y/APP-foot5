@@ -1,6 +1,10 @@
 import { Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { type ListNotificationsQuery, type NotificationPage, listNotificationsQuerySchema } from '@footfive/shared';
+import {
+  type ListNotificationsQuery,
+  type NotificationPage,
+  listNotificationsQuerySchema,
+} from '@footfive/shared';
 import { z } from 'zod';
 import { ZodValidationPipe } from '../../common/zod/zod-validation.pipe.js';
 import { CurrentUser } from '../auth/auth.decorators.js';
@@ -14,7 +18,9 @@ export class NotificationsController {
   constructor(private readonly notifications: NotificationsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Mes notifications (les plus récentes d’abord), avec le nombre de non lues' })
+  @ApiOperation({
+    summary: 'Mes notifications (les plus récentes d’abord), avec le nombre de non lues',
+  })
   list(
     @CurrentUser() user: AuthUser,
     @Query(new ZodValidationPipe(listNotificationsQuerySchema)) query: ListNotificationsQuery,
@@ -38,7 +44,10 @@ export class NotificationsController {
   @Post(':notificationId/read')
   @HttpCode(204)
   @ApiOperation({ summary: 'Marquer une notification comme lue' })
-  async read(@CurrentUser() user: AuthUser, @Param('notificationId', new ZodValidationPipe(z.uuid())) notificationId: string): Promise<void> {
+  async read(
+    @CurrentUser() user: AuthUser,
+    @Param('notificationId', new ZodValidationPipe(z.uuid())) notificationId: string,
+  ): Promise<void> {
     await this.notifications.markRead(user, notificationId);
   }
 }

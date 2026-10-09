@@ -1,6 +1,12 @@
 import { LOCALES, NOTIFICATION_TYPES } from '@footfive/shared';
 import { describe, expect, it } from 'vitest';
-import { EMAIL_NOTIFICATION_TYPES, formatWhen, normalizeLocale, notificationTypes, renderNotification } from './notification-content.js';
+import {
+  EMAIL_NOTIFICATION_TYPES,
+  formatWhen,
+  normalizeLocale,
+  notificationTypes,
+  renderNotification,
+} from './notification-content.js';
 
 const data = {
   reference: 'FF-ABC123',
@@ -18,12 +24,15 @@ describe('contenu des notifications', () => {
     expect([...notificationTypes].sort()).toEqual([...NOTIFICATION_TYPES].sort());
   });
 
-  it.each(NOTIFICATION_TYPES.flatMap((type) => LOCALES.map((locale) => [type, locale] as const)))('%s en %s : titre et corps renseignés, sans « undefined » ni « null »', (type, locale) => {
-    const { title, body } = renderNotification(type, data, locale);
-    expect(title.length).toBeGreaterThan(3);
-    expect(body.length).toBeGreaterThan(10);
-    expect(`${title} ${body}`).not.toMatch(/undefined|null|NaN/);
-  });
+  it.each(NOTIFICATION_TYPES.flatMap((type) => LOCALES.map((locale) => [type, locale] as const)))(
+    '%s en %s : titre et corps renseignés, sans « undefined » ni « null »',
+    (type, locale) => {
+      const { title, body } = renderNotification(type, data, locale);
+      expect(title.length).toBeGreaterThan(3);
+      expect(body.length).toBeGreaterThan(10);
+      expect(`${title} ${body}`).not.toMatch(/undefined|null|NaN/);
+    },
+  );
 
   it('écrit en arabe pour un compte arabe, en anglais pour un compte anglais', () => {
     expect(renderNotification('BOOKING_CONFIRMED', data, 'ar').title).toMatch(/[؀-ۿ]/);

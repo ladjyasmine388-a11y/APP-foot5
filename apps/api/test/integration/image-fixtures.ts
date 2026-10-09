@@ -6,9 +6,15 @@ export function jpegWithGps(pixels = 'pixels'): Buffer {
   const jfif = Buffer.from('JFIF\0\x01\x01\0\0\x01\0\x01\0\0');
   return Buffer.concat([
     Buffer.from([0xff, 0xd8]),
-    Buffer.from([0xff, 0xe0]), u16(jfif.length + 2), jfif,
-    Buffer.from([0xff, 0xe1]), u16(exif.length + 2), exif,
-    Buffer.from([0xff, 0xda, 0x00, 0x02]), Buffer.from(pixels), Buffer.from([0xff, 0xd9]),
+    Buffer.from([0xff, 0xe0]),
+    u16(jfif.length + 2),
+    jfif,
+    Buffer.from([0xff, 0xe1]),
+    u16(exif.length + 2),
+    exif,
+    Buffer.from([0xff, 0xda, 0x00, 0x02]),
+    Buffer.from(pixels),
+    Buffer.from([0xff, 0xd9]),
   ]);
 }
 

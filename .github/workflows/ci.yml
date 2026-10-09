@@ -12,7 +12,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     # Vraie base PostgreSQL pour les tests d'intégration (concurrence de réservation, contraintes).
     services:
@@ -49,3 +49,53 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm build
       - run: pnpm test
+      # Dépendances de production : aucune vulnérabilité connue de niveau élevé ou critique tolérée.
+      - run: pnpm audit --prod --audit-level=high
+
+  # Tests de bout en bout : navigateur réel, API compilée, base dédiée remise à zéro et alimentée avec les données de démonstration.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: footfive
+          POSTGRES_PASSWORD: footfive_ci_password
+          POSTGRES_DB: footfive_e2e
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U footfive -d footfive_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CI: 'true'
+      E2E_DATABASE_URL: postgresql://footfive:footfive_ci_password@localhost:5433/footfive_e2e
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm --filter @footfive/e2e exec playwright install --with-deps chromium
+      - run: pnpm --filter @footfive/e2e e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          retention-days: 7

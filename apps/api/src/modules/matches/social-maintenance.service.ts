@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { ENV } from '../../infra/config/config.module.js';
 import type { Env } from '../../infra/config/env.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
@@ -54,7 +60,10 @@ export class SocialMaintenanceService implements OnModuleInit, OnModuleDestroy {
     if (this.env.NODE_ENV === 'test') return;
     this.timer = setInterval(() => {
       this.runOnce().catch((error: unknown) =>
-        this.logger.error('Échec de la maintenance sociale', error instanceof Error ? error.stack : String(error)),
+        this.logger.error(
+          'Échec de la maintenance sociale',
+          error instanceof Error ? error.stack : String(error),
+        ),
       );
     }, INTERVAL_MS);
     this.timer.unref();
@@ -73,8 +82,11 @@ export class SocialMaintenanceService implements OnModuleInit, OnModuleDestroy {
   async runOnce(now: Date = new Date()): Promise<SocialMaintenanceResult> {
     const outcome: LifecycleOutcome = emptyOutcome();
     const result = await this.prisma.$transaction(async (tx): Promise<SocialMaintenanceResult> => {
-      const [lock] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(727002) AS locked`;
-      if (!lock?.locked) return { cascaded: 0, expiredListings: 0, completedMatches: 0, ran: false };
+      const [lock] = await tx.$queryRaw<
+        { locked: boolean }[]
+      >`SELECT pg_try_advisory_xact_lock(727002) AS locked`;
+      if (!lock?.locked)
+        return { cascaded: 0, expiredListings: 0, completedMatches: 0, ran: false };
 
       // 1. Filet de sécurité : réservation support disparue.
       const dead = ['CANCELLED', 'EXPIRED', 'NO_SHOW'] as const;
@@ -90,7 +102,8 @@ export class SocialMaintenanceService implements OnModuleInit, OnModuleDestroy {
         select: { id: true },
         take: BATCH,
       });
-      for (const { id } of orphanBookings) mergeOutcome(outcome, await cascadeBookingTx(tx, id, now));
+      for (const { id } of orphanBookings)
+        mergeOutcome(outcome, await cascadeBookingTx(tx, id, now));
 
       // 2. Annonces restées sans adversaire.
       const expired = await tx.opponentListing.updateManyAndReturn({
@@ -98,18 +111,28 @@ export class SocialMaintenanceService implements OnModuleInit, OnModuleDestroy {
         data: { status: 'EXPIRED' },
         select: { id: true },
       });
-      for (const { id } of expired) outcome.rejected.push(...(await rejectPendingRequestsTx(tx, id, now)));
+      for (const { id } of expired)
+        outcome.rejected.push(...(await rejectPendingRequestsTx(tx, id, now)));
 
       // 3. Matchs terminés.
       const ended = await tx.match.findMany({
-        where: { status: 'SCHEDULED', endsAt: { lte: now }, booking: { is: { status: { in: ['CONFIRMED', 'COMPLETED'] } } } },
+        where: {
+          status: 'SCHEDULED',
+          endsAt: { lte: now },
+          booking: { is: { status: { in: ['CONFIRMED', 'COMPLETED'] } } },
+        },
         select: { id: true },
         take: BATCH,
       });
       let completed = 0;
       for (const { id } of ended) if (await completeMatchTx(tx, id)) completed += 1;
 
-      return { cascaded: orphanBookings.length, expiredListings: expired.length, completedMatches: completed, ran: true };
+      return {
+        cascaded: orphanBookings.length,
+        expiredListings: expired.length,
+        completedMatches: completed,
+        ran: true,
+      };
     });
     await emitOutcome(this.events, outcome);
     return result;

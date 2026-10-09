@@ -25,9 +25,22 @@ function AdminLayout() {
   return (
     <>
       <PageHeader title={t('admin.title')} />
-      <nav aria-label={t('admin.title')} className="-mx-1 mb-5 flex gap-1 overflow-x-auto px-1 pb-1">
+      <nav
+        aria-label={t('admin.title')}
+        className="-mx-1 mb-5 flex gap-1 overflow-x-auto px-1 pb-1"
+      >
         {TABS.map((tab) => (
-          <NavLink key={tab.to} to={tab.to} end={tab.end} className={({ isActive }) => cx('min-h-10 shrink-0 rounded-lg px-3 py-2 text-sm font-medium', isActive ? 'bg-brand-700 text-white' : 'text-muted hover:bg-brand-50')}>
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            end={tab.end}
+            className={({ isActive }) =>
+              cx(
+                'min-h-10 shrink-0 rounded-lg px-3 py-2 text-sm font-medium',
+                isActive ? 'bg-brand-700 text-white' : 'text-muted hover:bg-brand-50',
+              )
+            }
+          >
             {t(tab.label)}
           </NavLink>
         ))}

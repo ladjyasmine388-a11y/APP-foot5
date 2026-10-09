@@ -1,4 +1,10 @@
-import { Inject, Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { ENV } from '../../infra/config/config.module.js';
 import type { Env } from '../../infra/config/env.js';
 import { PrismaService } from '../../infra/database/prisma.service.js';
@@ -36,7 +42,10 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
     if (this.env.NODE_ENV === 'test') return;
     this.timer = setInterval(() => {
       this.runOnce().catch((error: unknown) =>
-        this.logger.error('Échec des rappels', error instanceof Error ? error.stack : String(error)),
+        this.logger.error(
+          'Échec des rappels',
+          error instanceof Error ? error.stack : String(error),
+        ),
       );
     }, INTERVAL_MS);
     this.timer.unref();
@@ -48,7 +57,9 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
 
   async runOnce(now: Date = new Date()): Promise<RemindersResult> {
     const claimed = await this.prisma.$transaction(async (tx) => {
-      const [lock] = await tx.$queryRaw<{ locked: boolean }[]>`SELECT pg_try_advisory_xact_lock(727003) AS locked`;
+      const [lock] = await tx.$queryRaw<
+        { locked: boolean }[]
+      >`SELECT pg_try_advisory_xact_lock(727003) AS locked`;
       if (!lock?.locked) return null;
       return tx.match.updateManyAndReturn({
         where: {
@@ -66,8 +77,14 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
 
     for (const match of claimed) {
       const [participants, booking] = await Promise.all([
-        this.prisma.matchParticipant.findMany({ where: { matchId: match.id }, select: { userId: true } }),
-        this.prisma.booking.findUnique({ where: { id: match.bookingId }, select: { userId: true } }),
+        this.prisma.matchParticipant.findMany({
+          where: { matchId: match.id },
+          select: { userId: true },
+        }),
+        this.prisma.booking.findUnique({
+          where: { id: match.bookingId },
+          select: { userId: true },
+        }),
       ]);
       const recipients = new Set(participants.map((p) => p.userId));
       if (booking?.userId) recipients.add(booking.userId);

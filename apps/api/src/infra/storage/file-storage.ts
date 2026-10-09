@@ -19,10 +19,15 @@ export abstract class FileStorage {
   abstract delete(key: string): Promise<void>;
 }
 
-const CONTENT_TYPE_BY_EXT: Record<string, string> = { jpg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  webp: 'image/webp',
+};
 
 /** Clés générées par le serveur uniquement (UUID + extension) : aucune clé fournie par un client n'atteint le disque. */
-export const STORAGE_KEY = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
+export const STORAGE_KEY =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|webp)$/;
 
 /** Stockage sur le disque local : développement et déploiement à une seule instance. */
 @Injectable()
@@ -49,7 +54,10 @@ export class LocalFileStorage extends FileStorage {
     if (!STORAGE_KEY.test(key)) return null;
     try {
       const data = await readFile(this.pathOf(key));
-      return { data, contentType: CONTENT_TYPE_BY_EXT[key.split('.').pop() ?? ''] ?? 'application/octet-stream' };
+      return {
+        data,
+        contentType: CONTENT_TYPE_BY_EXT[key.split('.').pop() ?? ''] ?? 'application/octet-stream',
+      };
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
       throw error;
@@ -74,7 +82,9 @@ export class LocalFileStorage extends FileStorage {
       useFactory: (env: Env): FileStorage => {
         if (env.STORAGE_DRIVER === 's3') {
           // Démarrer en croyant stocker sur S3 alors que les fichiers iraient sur le disque serait pire que ne pas démarrer.
-          throw new Error('STORAGE_DRIVER=s3 n’est pas encore implémenté : utilisez « local » (une seule instance).');
+          throw new Error(
+            'STORAGE_DRIVER=s3 n’est pas encore implémenté : utilisez « local » (une seule instance).',
+          );
         }
         return new LocalFileStorage(env.STORAGE_LOCAL_DIR);
       },

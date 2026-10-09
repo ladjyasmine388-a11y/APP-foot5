@@ -55,7 +55,11 @@ export function PaymentReturnPage() {
       )}
       <div className="mt-5 flex gap-2">
         <LinkButton to={`/bookings/${id}`}>{t('bookings.detail.title')}</LinkButton>
-        {status && !FINAL.has(status) && <Button variant="secondary" onClick={() => void payment.refetch()}>{t('common.retry')}</Button>}
+        {status && !FINAL.has(status) && (
+          <Button variant="secondary" onClick={() => void payment.refetch()}>
+            {t('common.retry')}
+          </Button>
+        )}
       </div>
     </div>
   );

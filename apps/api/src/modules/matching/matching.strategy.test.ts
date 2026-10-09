@@ -39,9 +39,15 @@ describe('SimpleCriteriaStrategy', () => {
     });
 
     it('accepte le même niveau et les niveaux voisins (±1)', () => {
-      expect(strategy.isCompatible(player('INTERMEDIATE'), session({ level: 'INTERMEDIATE' }))).toBe(true);
-      expect(strategy.isCompatible(player('BEGINNER'), session({ level: 'INTERMEDIATE' }))).toBe(true);
-      expect(strategy.isCompatible(player('ADVANCED'), session({ level: 'INTERMEDIATE' }))).toBe(true);
+      expect(
+        strategy.isCompatible(player('INTERMEDIATE'), session({ level: 'INTERMEDIATE' })),
+      ).toBe(true);
+      expect(strategy.isCompatible(player('BEGINNER'), session({ level: 'INTERMEDIATE' }))).toBe(
+        true,
+      );
+      expect(strategy.isCompatible(player('ADVANCED'), session({ level: 'INTERMEDIATE' }))).toBe(
+        true,
+      );
     });
 
     it('refuse un écart de deux niveaux (débutant ↔ avancé)', () => {
@@ -85,13 +91,20 @@ describe('SimpleCriteriaStrategy', () => {
         session({ id: 'ouverte-ici' }),
       ];
       const ranked = strategy.rank(player('BEGINNER'), sessions, NOW);
-      expect(ranked.map((r) => r.session.id)).toEqual(['même-niveau', 'ouverte-ici', 'ouverte-loin']);
+      expect(ranked.map((r) => r.session.id)).toEqual([
+        'même-niveau',
+        'ouverte-ici',
+        'ouverte-loin',
+      ]);
     });
 
     it('départage deux scores égaux par l’heure de début', () => {
       const ranked = strategy.rank(
         player('BEGINNER'),
-        [session({ id: 'tard', startsAt: inHours(300) }), session({ id: 'tôt', startsAt: inHours(300) })],
+        [
+          session({ id: 'tard', startsAt: inHours(300) }),
+          session({ id: 'tôt', startsAt: inHours(300) }),
+        ],
         NOW,
       );
       expect(ranked).toHaveLength(2);
@@ -114,6 +127,8 @@ describe('SimpleCriteriaStrategy', () => {
         return 1;
       }
     }
-    expect(new AlwaysYes().rank(player('BEGINNER'), [session({ level: 'ADVANCED' })], NOW)).toHaveLength(1);
+    expect(
+      new AlwaysYes().rank(player('BEGINNER'), [session({ level: 'ADVANCED' })], NOW),
+    ).toHaveLength(1);
   });
 });

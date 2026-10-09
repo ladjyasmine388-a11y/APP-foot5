@@ -6,3 +6,9 @@ coverage
 pnpm-lock.yaml
 apps/api/prisma/migrations
 apps/api/src/generated
+.cache
+.claude
+apps/api/storage
+playwright-report
+test-results
+e2e/.auth

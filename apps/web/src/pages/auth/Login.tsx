@@ -44,7 +44,10 @@ export function LoginPage() {
       footer={
         <>
           {t('auth.login.noAccount')}{' '}
-          <Link className="font-semibold text-brand-700 underline" to={`/register${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}>
+          <Link
+            className="font-semibold text-brand-700 underline"
+            to={`/register${next !== '/' ? `?next=${encodeURIComponent(next)}` : ''}`}
+          >
             {t('nav.register')}
           </Link>
         </>
@@ -53,10 +56,27 @@ export function LoginPage() {
       <form onSubmit={submit} noValidate className="space-y-4">
         {failure !== null && <Alert tone="error">{tError(failure)}</Alert>}
         <Field label={t('auth.email')} error={errors['email'] ? t('form.invalidField') : null}>
-          {(p) => <Input {...p} type="email" autoComplete="email" inputMode="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />}
+          {(p) => (
+            <Input
+              {...p}
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+          )}
         </Field>
         <Field label={t('auth.password')} error={errors['password'] ? t('form.required') : null}>
-          {(p) => <Input {...p} type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />}
+          {(p) => (
+            <Input
+              {...p}
+              type="password"
+              autoComplete="current-password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+            />
+          )}
         </Field>
         <Button type="submit" loading={busy} className="w-full">
           {t('auth.login.submit')}

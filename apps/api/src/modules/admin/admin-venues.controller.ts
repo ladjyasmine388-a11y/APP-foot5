@@ -30,8 +30,13 @@ export class AdminVenuesController {
   constructor(private readonly venues: AdminVenuesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Complexes (les demandes en attente d’abord), avec propriétaires, taux de commission et acompte' })
-  list(@Query(new ZodValidationPipe(adminListVenuesQuerySchema)) query: AdminListVenuesQuery): Promise<PageOf<AdminVenueView>> {
+  @ApiOperation({
+    summary:
+      'Complexes (les demandes en attente d’abord), avec propriétaires, taux de commission et acompte',
+  })
+  list(
+    @Query(new ZodValidationPipe(adminListVenuesQuerySchema)) query: AdminListVenuesQuery,
+  ): Promise<PageOf<AdminVenueView>> {
     return this.venues.list(query);
   }
 
@@ -43,7 +48,9 @@ export class AdminVenuesController {
 
   @Post(':venueId/approve')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Approuver un complexe en attente ou refusé (il doit avoir au moins un terrain actif)' })
+  @ApiOperation({
+    summary: 'Approuver un complexe en attente ou refusé (il doit avoir au moins un terrain actif)',
+  })
   @ApiZodBody(venueApprovalSchema)
   approve(
     @CurrentUser() admin: AuthUser,
@@ -56,7 +63,9 @@ export class AdminVenuesController {
 
   @Post(':venueId/reject')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Refuser un complexe en attente (motif obligatoire, communiqué aux gérants)' })
+  @ApiOperation({
+    summary: 'Refuser un complexe en attente (motif obligatoire, communiqué aux gérants)',
+  })
   @ApiZodBody(venueRejectionSchema)
   reject(
     @CurrentUser() admin: AuthUser,
@@ -69,7 +78,10 @@ export class AdminVenuesController {
 
   @Post(':venueId/suspend')
   @HttpCode(200)
-  @ApiOperation({ summary: 'Suspendre un complexe approuvé (motif obligatoire) : il disparaît des recherches et n’accepte plus de réservation' })
+  @ApiOperation({
+    summary:
+      'Suspendre un complexe approuvé (motif obligatoire) : il disparaît des recherches et n’accepte plus de réservation',
+  })
   @ApiZodBody(venueRejectionSchema)
   suspend(
     @CurrentUser() admin: AuthUser,
@@ -94,7 +106,9 @@ export class AdminVenuesController {
   }
 
   @Put(':venueId/deposit-policy')
-  @ApiOperation({ summary: 'Acompte propre à un complexe (null : règle par défaut de la plateforme)' })
+  @ApiOperation({
+    summary: 'Acompte propre à un complexe (null : règle par défaut de la plateforme)',
+  })
   @ApiZodBody(setVenueDepositPolicySchema)
   setDeposit(
     @CurrentUser() admin: AuthUser,

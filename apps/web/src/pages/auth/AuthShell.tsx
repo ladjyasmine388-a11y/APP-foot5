@@ -2,7 +2,17 @@ import type { ReactNode } from 'react';
 import { Card } from '../../components/ui';
 
 /** Cadre commun des pages d'authentification : une colonne centrée, lisible sur mobile. */
-export function AuthShell({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
+export function AuthShell({
+  title,
+  subtitle,
+  children,
+  footer,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
   return (
     <div className="mx-auto w-full max-w-md py-4 sm:py-10">
       <Card className="p-6 sm:p-8">

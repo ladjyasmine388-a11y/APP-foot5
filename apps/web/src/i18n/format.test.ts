@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { detectLocale, directionOf, formatMoney, formatTime, interpolate, localDate, localToUtcIso, parseHHMM } from './format';
+import {
+  detectLocale,
+  directionOf,
+  formatMoney,
+  formatTime,
+  interpolate,
+  localDate,
+  localToUtcIso,
+  parseHHMM,
+} from './format';
 
 describe('formats', () => {
   it('affiche les montants en dinars avec des espaces comme séparateur de milliers, y compris en arabe', () => {

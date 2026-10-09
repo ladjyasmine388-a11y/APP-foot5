@@ -23,7 +23,8 @@ import { PLATFORM_TZ } from '../matches/social-common.js';
 import { lockVenueForRating, recomputeVenueRating } from '../reviews/reviews.service.js';
 import { decodeOffset, encodeOffset } from '../teams/teams.service.js';
 
-const conflict = (message: string): AppException => new AppException('CONFLICT', HttpStatus.CONFLICT, message);
+const conflict = (message: string): AppException =>
+  new AppException('CONFLICT', HttpStatus.CONFLICT, message);
 
 @Injectable()
 export class AdminModerationService {
@@ -66,13 +67,24 @@ export class AdminModerationService {
    * le même échec. L'ancienne ligne reste, avec son motif d'échec, comme historique. La réservation est verrouillée :
    * deux clics simultanés ne créent qu'une relance.
    */
-  async retryRefund(admin: AuthUser, id: string, ctx: RequestContext): Promise<{ refundId: string }> {
+  async retryRefund(
+    admin: AuthUser,
+    id: string,
+    ctx: RequestContext,
+  ): Promise<{ refundId: string }> {
     const created = await this.prisma.$transaction(async (tx) => {
-      const failed = await tx.refund.findUnique({ where: { id }, select: { id: true, status: true, paymentId: true, bookingId: true } });
+      const failed = await tx.refund.findUnique({
+        where: { id },
+        select: { id: true, status: true, paymentId: true, bookingId: true },
+      });
       if (!failed) throw Errors.notFound('Remboursement introuvable');
       await tx.$queryRaw`SELECT "id" FROM "Booking" WHERE "id" = ${failed.bookingId}::uuid FOR UPDATE`;
-      const current = await tx.refund.findUniqueOrThrow({ where: { id }, select: { status: true } });
-      if (current.status !== 'FAILED') throw conflict('Seul un remboursement en échec peut être relancé');
+      const current = await tx.refund.findUniqueOrThrow({
+        where: { id },
+        select: { status: true },
+      });
+      if (current.status !== 'FAILED')
+        throw conflict('Seul un remboursement en échec peut être relancé');
       const requested = await this.refunds.requestForPayment(tx, {
         paymentId: failed.paymentId,
         bookingId: failed.bookingId,
@@ -81,7 +93,18 @@ export class AdminModerationService {
       });
       const refundId = requested.refundIds[0];
       if (!refundId) throw conflict('Ce remboursement a déjà été relancé ou réglé');
-      await this.audit.record({ actorId: admin.id, actorRole: 'ADMIN', action: 'refund.retry', entityType: 'Refund', entityId: id, after: { newRefundId: refundId, amountMinor: requested.totalMinor } }, ctx, tx);
+      await this.audit.record(
+        {
+          actorId: admin.id,
+          actorRole: 'ADMIN',
+          action: 'refund.retry',
+          entityType: 'Refund',
+          entityId: id,
+          after: { newRefundId: refundId, amountMinor: requested.totalMinor },
+        },
+        ctx,
+        tx,
+      );
       return refundId;
     });
     await this.events.emit('refund.requested', { refundIds: [created] });
@@ -89,14 +112,33 @@ export class AdminModerationService {
   }
 
   /** Remboursement décidé par l'administration (litige, geste commercial) : tout ce qui a été payé et pas encore remboursé. */
-  async refundBooking(admin: AuthUser, bookingId: string, input: AdminRefundBookingInput, ctx: RequestContext): Promise<{ totalMinor: number; refundIds: string[] }> {
+  async refundBooking(
+    admin: AuthUser,
+    bookingId: string,
+    input: AdminRefundBookingInput,
+    ctx: RequestContext,
+  ): Promise<{ totalMinor: number; refundIds: string[] }> {
     const result = await this.prisma.$transaction(async (tx) => {
-      const locked = await tx.$queryRaw<{ id: string }[]>`SELECT "id" FROM "Booking" WHERE "id" = ${bookingId}::uuid FOR UPDATE`;
+      const locked = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT "id" FROM "Booking" WHERE "id" = ${bookingId}::uuid FOR UPDATE`;
       if (locked.length === 0) throw Errors.notFound('Réservation introuvable');
-      const requested = await this.refunds.requestFullRefund(tx, { bookingId, reason: `Décision de l'administration : ${input.reason}`, requestedById: admin.id });
-      if (requested.refundIds.length === 0) throw conflict('Rien à rembourser sur cette réservation');
+      const requested = await this.refunds.requestFullRefund(tx, {
+        bookingId,
+        reason: `Décision de l'administration : ${input.reason}`,
+        requestedById: admin.id,
+      });
+      if (requested.refundIds.length === 0)
+        throw conflict('Rien à rembourser sur cette réservation');
       await this.audit.record(
-        { actorId: admin.id, actorRole: 'ADMIN', action: 'refund.admin_request', entityType: 'Booking', entityId: bookingId, after: { totalMinor: requested.totalMinor, reason: input.reason } },
+        {
+          actorId: admin.id,
+          actorRole: 'ADMIN',
+          action: 'refund.admin_request',
+          entityType: 'Booking',
+          entityId: bookingId,
+          after: { totalMinor: requested.totalMinor, reason: input.reason },
+        },
         ctx,
         tx,
       );
@@ -113,9 +155,16 @@ export class AdminModerationService {
     const rows = await this.prisma.review.findMany({
       where: {
         ...(query.venueId ? { venueId: query.venueId } : {}),
-        ...(query.hidden === undefined ? {} : query.hidden ? { hiddenAt: { not: null } } : { hiddenAt: null }),
+        ...(query.hidden === undefined
+          ? {}
+          : query.hidden
+            ? { hiddenAt: { not: null } }
+            : { hiddenAt: null }),
       },
-      include: { venue: { select: { id: true, name: true } }, user: { select: { firstName: true, lastName: true } } },
+      include: {
+        venue: { select: { id: true, name: true } },
+        user: { select: { firstName: true, lastName: true } },
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       skip: offset,
       take: query.limit + 1,
@@ -135,8 +184,18 @@ export class AdminModerationService {
   }
 
   /** Masque (ou rétablit) un avis ; la note du complexe est recalculée dans la même transaction, sous verrou. */
-  async setReviewHidden(admin: AuthUser, id: string, hidden: boolean, input: ModerateReviewInput, ctx: RequestContext, now: Date = new Date()): Promise<void> {
-    const review = await this.prisma.review.findUnique({ where: { id }, select: { venueId: true } });
+  async setReviewHidden(
+    admin: AuthUser,
+    id: string,
+    hidden: boolean,
+    input: ModerateReviewInput,
+    ctx: RequestContext,
+    now: Date = new Date(),
+  ): Promise<void> {
+    const review = await this.prisma.review.findUnique({
+      where: { id },
+      select: { venueId: true },
+    });
     if (!review) throw Errors.notFound('Avis introuvable');
     await this.prisma.$transaction(async (tx) => {
       await lockVenueForRating(tx, review.venueId);
@@ -145,10 +204,18 @@ export class AdminModerationService {
         data: { hiddenAt: hidden ? now : null },
         select: { id: true },
       });
-      if (claimed.length === 0) throw conflict(hidden ? 'Cet avis est déjà masqué' : 'Cet avis n’est pas masqué');
+      if (claimed.length === 0)
+        throw conflict(hidden ? 'Cet avis est déjà masqué' : 'Cet avis n’est pas masqué');
       await recomputeVenueRating(tx, review.venueId);
       await this.audit.record(
-        { actorId: admin.id, actorRole: 'ADMIN', action: hidden ? 'review.hide' : 'review.unhide', entityType: 'Review', entityId: id, after: { reason: input.reason } },
+        {
+          actorId: admin.id,
+          actorRole: 'ADMIN',
+          action: hidden ? 'review.hide' : 'review.unhide',
+          entityType: 'Review',
+          entityId: id,
+          after: { reason: input.reason },
+        },
         ctx,
         tx,
       );
@@ -165,10 +232,20 @@ export class AdminModerationService {
       ...(query.entityId ? { entityId: query.entityId } : {}),
       ...(query.actorId ? { actorId: query.actorId } : {}),
       ...(query.from || query.to
-        ? { createdAt: { ...(query.from ? { gte: localToUtc(query.from, 0, PLATFORM_TZ) } : {}), ...(query.to ? { lt: localToUtc(query.to, 1440, PLATFORM_TZ) } : {}) } }
+        ? {
+            createdAt: {
+              ...(query.from ? { gte: localToUtc(query.from, 0, PLATFORM_TZ) } : {}),
+              ...(query.to ? { lt: localToUtc(query.to, 1440, PLATFORM_TZ) } : {}),
+            },
+          }
         : {}),
     };
-    const rows = await this.prisma.auditLog.findMany({ where, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], skip: offset, take: query.limit + 1 });
+    const rows = await this.prisma.auditLog.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      skip: offset,
+      take: query.limit + 1,
+    });
     return {
       items: rows.slice(0, query.limit).map((r) => ({
         id: r.id,

@@ -22,15 +22,28 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setItems((list) => list.filter((item) => item.id !== id)), 4500);
   }, []);
 
-  const api = useMemo<ToastApi>(() => ({ success: (text) => push('success', text), error: (text) => push('error', text) }), [push]);
+  const api = useMemo<ToastApi>(
+    () => ({ success: (text) => push('success', text), error: (text) => push('error', text) }),
+    [push],
+  );
 
   return (
     <ToastContext.Provider value={api}>
       {children}
       {/* Zone annoncée aux lecteurs d'écran ; au-dessus de la barre de navigation mobile */}
-      <div aria-live="polite" className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4 sm:bottom-6">
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-20 z-50 flex flex-col items-center gap-2 px-4 sm:bottom-6"
+      >
         {items.map((item) => (
-          <div key={item.id} role={item.tone === 'error' ? 'alert' : 'status'} className={cx('pointer-events-auto max-w-md rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg', item.tone === 'error' ? 'bg-red-600' : 'bg-brand-800')}>
+          <div
+            key={item.id}
+            role={item.tone === 'error' ? 'alert' : 'status'}
+            className={cx(
+              'pointer-events-auto max-w-md rounded-xl px-4 py-3 text-sm font-medium text-white shadow-lg',
+              item.tone === 'error' ? 'bg-red-600' : 'bg-brand-800',
+            )}
+          >
             {item.text}
           </div>
         ))}
