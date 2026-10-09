@@ -1,0 +1,65 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Tout le site n'utilise que ces variables : changer l'identité visuelle = changer ce bloc.
+ * Les marges et alignements utilisent les propriétés LOGIQUES (ms-*, ps-*, text-start…) pour que l'arabe (RTL)
+ * s'affiche correctement sans styles dédiés.
+ */
+@theme {
+  --color-brand-50: #ecfdf3;
+  --color-brand-100: #d1fae1;
+  --color-brand-200: #a6f3c4;
+  --color-brand-300: #6fe39f;
+  --color-brand-400: #34c777;
+  --color-brand-500: #14a85a;
+  --color-brand-600: #0b8a49;
+  --color-brand-700: #0b6e3d;
+  --color-brand-800: #0b5d3b;
+  --color-brand-900: #0a4a30;
+  --color-ink: #12201a;
+  --color-muted: #5b6b63;
+  --color-line: #dde5e0;
+  --color-surface: #ffffff;
+  --color-canvas: #f4f7f5;
+  --font-sans: 'Inter', 'Segoe UI', 'Noto Sans Arabic', 'Noto Sans', Tahoma, system-ui, sans-serif;
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    min-height: 100dvh;
+    /* Barre de navigation basse du mobile + zone sûre (encoche) */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-brand-400);
+    outline-offset: 2px;
+  }
+  button,
+  a,
+  select,
+  input,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* Les chiffres restent en notation occidentale, alignés, même en arabe */
+  .num {
+    font-variant-numeric: tabular-nums;
+    unicode-bidi: plaintext;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -112,6 +112,8 @@ export interface PublicUser {
   birthDate: string | null;
   avatarUrl: string | null;
   locale: (typeof LOCALES)[number];
+  /** Préférences de l'utilisateur lui-même (ex. `emailNotifications`). */
+  preferences: Record<string, string | number | boolean>;
   platformRole: 'USER' | 'ADMIN';
   createdAt: string;
 }

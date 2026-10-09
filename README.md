@@ -3,15 +3,15 @@
 Plateforme de réservation de terrains de **Foot Five** et de mise en relation :
 réservez un créneau, complétez votre équipe, trouvez un adversaire.
 
-> **Statut : développement en cours** — étapes 1 à 9 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images, administration / tableaux de bord / personnel).
+> **Statut : développement en cours** — étapes 1 à 10 terminées sur 11 (fondations, base de données, authentification, complexes et disponibilités, réservations, paiements, équipes / sessions / adversaires / matchs, notifications / emails / avis / images, administration / tableaux de bord / personnel, application web trilingue).
 > La documentation complète (architecture, déploiement, comptes de démo) sera finalisée en fin de projet.
-> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · Notifications, avis, images : [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) · Administration : [docs/ADMIN.md](docs/ADMIN.md) · API interactive : <http://localhost:3000/api/docs>.
+> Modèle de données : [docs/DATA-MODEL.md](docs/DATA-MODEL.md) · Authentification : [docs/AUTH.md](docs/AUTH.md) · Disponibilités : [docs/AVAILABILITY.md](docs/AVAILABILITY.md) · Réservations : [docs/BOOKINGS.md](docs/BOOKINGS.md) · Paiements : [docs/PAYMENTS.md](docs/PAYMENTS.md) · Équipes, sessions et matchs : [docs/SOCIAL.md](docs/SOCIAL.md) · Notifications, avis, images : [docs/NOTIFICATIONS.md](docs/NOTIFICATIONS.md) · Administration : [docs/ADMIN.md](docs/ADMIN.md) · Application web : [docs/WEB.md](docs/WEB.md) · API interactive : <http://localhost:3000/api/docs>.
 
 ## Stack
 
 | Couche          | Technologie                                                                                           |
 | --------------- | ----------------------------------------------------------------------------------------------------- |
-| Web             | React 19, Vite, TypeScript (Tailwind, TanStack Query, React Router, i18n AR/FR/EN + RTL à l'étape 10) |
+| Web             | React 19, Vite, TypeScript, Tailwind v4, TanStack Query, React Router, i18n AR/FR/EN + RTL          |
 | API             | NestJS 12 (Fastify), TypeScript, Zod, OpenAPI                                                         |
 | Base de données | PostgreSQL 16 + Prisma (étape 2)                                                                      |
 | Monorepo        | pnpm workspaces + Turborepo                                                                           |
@@ -40,6 +40,7 @@ cp .env.example .env        # puis adapter le port de la base (voir ci-dessous)
 pnpm build                  # construit packages/shared (requis par api et web)
 pnpm --filter @footfive/api db:migrate   # applique les migrations
 pnpm --filter @footfive/api db:seed      # commission globale 1 % + paramètres par défaut
+pnpm --filter @footfive/api db:seed:demo # (dev) 10 complexes, joueurs, équipes, parties… voir docs/WEB.md
 pnpm --filter @footfive/api dev
 pnpm --filter @footfive/web dev
 ```

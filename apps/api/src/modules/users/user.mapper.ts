@@ -20,6 +20,7 @@ export function toPublicUser(user: User): PublicUser {
     birthDate: user.birthDate ? user.birthDate.toISOString().slice(0, 10) : null,
     avatarUrl: user.avatarUrl,
     locale: user.locale as Locale,
+    preferences: (user.preferences ?? {}) as PublicUser['preferences'],
     platformRole: user.platformRole,
     createdAt: user.createdAt.toISOString(),
   };
