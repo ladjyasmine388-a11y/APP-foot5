@@ -6,22 +6,22 @@
  * s'affiche correctement sans styles dédiés.
  */
 @theme {
-  --color-brand-50: #ecfdf3;
-  --color-brand-100: #d1fae1;
-  --color-brand-200: #a6f3c4;
-  --color-brand-300: #6fe39f;
-  --color-brand-400: #34c777;
-  --color-brand-500: #14a85a;
-  --color-brand-600: #0b8a49;
-  --color-brand-700: #0b6e3d;
-  --color-brand-800: #0b5d3b;
-  --color-brand-900: #0a4a30;
-  --color-ink: #12201a;
-  --color-muted: #5b6b63;
-  --color-line: #dde5e0;
+  --color-brand-50: #eef4fb;
+  --color-brand-100: #d6e4f5;
+  --color-brand-200: #adc9ea;
+  --color-brand-300: #7aa5d6;
+  --color-brand-400: #3f78b8;
+  --color-brand-500: #0f4c8a;
+  --color-brand-600: #003366;
+  --color-brand-700: #002b57;
+  --color-brand-800: #002248;
+  --color-brand-900: #001a38;
+  --color-ink: #0e1a28;
+  --color-muted: #586678;
+  --color-line: #dce3ec;
   --color-surface: #ffffff;
-  --color-canvas: #f4f7f5;
-  --font-sans: 'Inter', 'Segoe UI', 'Noto Sans Arabic', 'Noto Sans', Tahoma, system-ui, sans-serif;
+  --color-canvas: #f3f6fa;
+  --font-sans: 'Manrope Variable', 'Manrope', 'Segoe UI', 'Noto Sans Arabic', 'Noto Sans', Tahoma, system-ui, sans-serif;
   --radius-card: 1rem;
 }
 

@@ -13,6 +13,7 @@ import { SoloCard } from './solo/SoloCard';
 export function HomePage() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ city: '', date: localDate(0), time: '', players: '' });
 
   const featured = useQuery({
@@ -35,16 +36,46 @@ export function HomePage() {
 
   return (
     <>
-      <section className="-mx-4 -mt-5 mb-8 bg-linear-to-br from-brand-900 via-brand-800 to-brand-600 px-4 pb-10 pt-10 text-white sm:mx-0 sm:mt-0 sm:rounded-3xl sm:px-10">
-        <h1 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight sm:text-5xl">
+      <section className="relative isolate -mx-4 -mt-5 mb-8 overflow-hidden bg-linear-to-br from-brand-900 via-brand-800 to-brand-600 flex min-h-[32rem] flex-col justify-center px-4 pb-10 pt-10 text-white sm:mx-0 sm:mt-0 sm:min-h-[36rem] sm:rounded-3xl sm:px-10 lg:min-h-[40rem]">
+        <img
+          src="/foot1.jpg"
+          alt=""
+          className="absolute inset-0 -z-20 size-full object-cover"
+          fetchPriority="high"
+        />
+        <h1 className="max-w-2xl text-3xl font-extrabold leading-tight tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:text-5xl">
           {t('home.hero.title')}
         </h1>
-        <p className="mt-3 max-w-xl text-base text-brand-100 sm:text-lg">
+        <p className="mt-3 max-w-xl text-base text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.7)] sm:text-lg">
           {t('home.hero.subtitle')}
         </p>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-controls="home-search"
+          className="mt-6 inline-flex w-fit items-center gap-3 rounded-full bg-white px-5 py-3 font-semibold text-brand-700 shadow-xl transition-colors hover:bg-brand-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+        >
+          {t('home.search.cta')}
+          <svg
+            viewBox="0 0 24 24"
+            width="22"
+            height="22"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className={`transition-transform duration-300 ${open ? 'rotate-180' : 'animate-bounce motion-reduce:animate-none'}`}
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
         <form
+          id="home-search"
           onSubmit={submit}
-          className="mt-6 grid gap-3 rounded-2xl bg-white p-4 text-ink shadow-xl sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] lg:items-end"
+          className={`mt-4 gap-3 rounded-2xl bg-white p-4 text-ink shadow-xl sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] lg:items-end ${open ? 'grid' : 'hidden'}`}
         >
           <Field label={t('common.city')}>
             {(p) => (

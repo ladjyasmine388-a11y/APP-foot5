@@ -1,0 +1,32 @@
+# Surcouche DÉMO pour un VPS : mêmes services que compose.prod.yml + Caddy (HTTPS automatique).
+# Paiement simulé, emails dans les journaux, NODE_ENV=development : AUCUN vrai argent, ne pas ouvrir à de vrais clients.
+# Le mode production réel est impossible tant que l'adaptateur CIB/Edahabia n'existe pas (docs/PAYMENTS.md).
+#
+#   docker compose -f docker/compose.prod.yml -f docker/compose.demo.yml --env-file .env.production up -d --build
+
+services:
+  api:
+    environment:
+      NODE_ENV: development
+      PAYMENT_PROVIDER: fake
+      MAIL_DRIVER: console
+
+  web:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN est obligatoire (ex. demo.exemple.com)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+
+volumes:
+  caddy_data:

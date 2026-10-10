@@ -1,0 +1,6 @@
+# HTTPS automatique (Let's Encrypt) pour le domaine {$SITE_DOMAIN}, relayé vers nginx (site + /api).
+{$SITE_DOMAIN} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy web:80
+}
